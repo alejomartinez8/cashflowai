@@ -145,7 +145,7 @@ export default function LoginPage() {
 # Google OAuth + Sheets (no service account needed)
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_SHEETS_ID=GOOGLE_SHEETS_ID_REDACTED
+GOOGLE_SHEETS_ID=
 
 # Single-user access control
 ALLOWED_EMAIL=your@gmail.com
