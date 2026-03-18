@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 
-export default auth((req) => {
+export const proxy = auth((req) => {
   const isLoggedIn = !!req.auth
   const isAllowedEmail = req.auth?.user?.email === process.env.ALLOWED_EMAIL
 
