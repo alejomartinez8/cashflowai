@@ -96,7 +96,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ```
 
 ```typescript
-// middleware.ts — single-user protection
+// proxy.ts — single-user protection (Next.js 16 convention, NOT middleware.ts)
 import { auth } from '@/auth'
 
 export default auth((req) => {
@@ -170,7 +170,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=
 ```
 cashflowai/
 ├── auth.ts                               ← NextAuth config
-├── middleware.ts                         ← single-user route protection
+├── proxy.ts                              ← single-user route protection (Next.js 16)
 ├── .env.local                            ← gitignored
 ├── .env.local.example
 ├── .gitignore
@@ -381,28 +381,29 @@ export const QUICK_PROMPTS = [
 
 ---
 
-## Implementation plan
+## Implementation tasks
 
 Work through these tasks one at a time. Tell me "implement task N" for each one.
 
 - [x] Task 1 — Scaffold: Next.js 16 app with yarn, folder structure, `.env.local.example`,
       `.gitignore`, `lib/types.ts`, `lib/formatters.ts`
 
-- [ ] Task 2 — Auth: install `next-auth@beta`, create `auth.ts` with Google provider
-      requesting Sheets read scope, `middleware.ts` with single-email guard,
+- [x] Task 2 — Auth: install `next-auth@beta`, create `auth.ts` with Google provider
+      requesting Sheets read scope, `proxy.ts` with single-email guard,
       `app/login/page.tsx`, `app/api/auth/[...nextauth]/route.ts`
 
-- [ ] Task 3 — AI providers: `lib/ai/providers.ts` with `getModel()`,
-      install `ai @ai-sdk/react @ai-sdk/anthropic @ai-sdk/openai @ai-sdk/google zod`
+- [ ] Task 3 — Sheets client: `lib/sheets/client.ts` using session access token
+      (no service account), `loadTabs(tabs[])`, per-tab 5-min in-memory cache,
+      install `googleapis`
 
-- [ ] Task 4 — Sheets client: `lib/sheets/client.ts` using session access token
-      (no service account), `loadTabs(tabs[])`, per-tab 5-min in-memory cache
-
-- [ ] Task 5 — Sheets route: `app/api/sheets/route.ts`, GET, `?tabs=` param,
+- [ ] Task 4 — Sheets route: `app/api/sheets/route.ts`, GET, `?tabs=` param,
       `?refresh=true` support, protected — returns 401 if no valid session
 
-- [ ] Task 6 — System prompt: `lib/ai/prompts.ts` with `buildSystemPrompt()`
+- [ ] Task 5 — System prompt: `lib/ai/prompts.ts` with `buildSystemPrompt()`
       (no data injected), financial freedom goal + chart rules + tool instructions
+
+- [ ] Task 6 — AI providers: `lib/ai/providers.ts` with `getModel()`,
+      install `ai @ai-sdk/react @ai-sdk/anthropic @ai-sdk/openai @ai-sdk/google zod`
 
 - [ ] Task 7 — AI chat route: `app/api/ai/chat/route.ts`, POST, `streamText()`
       with `get_sheet_data` tool, `stopWhen: stepCountIs(3)`, `toUIMessageStreamResponse()`, session-protected

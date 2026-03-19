@@ -35,7 +35,7 @@ CashflowAI is a single-user AI financial assistant. The user chats with an AI th
 
 ### AI provider abstraction
 
-`lib/ai/providers.ts` (not yet created — Task 3) must expose `getModel()`. Never hardcode model names outside that file. Switch provider/model via env vars:
+`lib/ai/providers.ts` (not yet created — Task 6) must expose `getModel()`. Never hardcode model names outside that file. Switch provider/model via env vars:
 
 ```
 AI_PROVIDER=anthropic   # anthropic | openai | google
@@ -89,4 +89,4 @@ ANTHROPIC_API_KEY=       # or OPENAI_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY
 
 ## Implementation status
 
-Tasks are tracked in `PLAN.md`. Completed: Task 1 (scaffold), Task 2 (auth). Remaining: Tasks 3–16 (AI providers, Sheets client, API routes, UI components).
+Tasks are tracked in `TODO.md`. Completed: Task 1 (scaffold), Task 2 (auth). Remaining: Tasks 3–16 (Sheets client, AI providers, API routes, UI components).
