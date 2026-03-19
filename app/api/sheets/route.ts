@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { loadTabs, clearCache, TABS } from '@/lib/sheets/client'
+import { loadTabs, TABS } from '@/lib/sheets/client'
 import type { TabName } from '@/lib/types'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -10,10 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { searchParams } = req.nextUrl
-  const tabsParam = searchParams.get('tabs')
-  const refresh = searchParams.get('refresh') === 'true'
-
+  const tabsParam = req.nextUrl.searchParams.get('tabs')
   const requestedTabs = tabsParam
     ? tabsParam.split(',').map((t) => t.trim()).filter((t) => TABS.includes(t as TabName)) as TabName[]
     : []
@@ -25,10 +22,6 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  if (refresh) {
-    requestedTabs.forEach((tab) => clearCache(tab))
-  }
-
-  const data = await loadTabs(requestedTabs, refresh)
+  const data = await loadTabs(requestedTabs)
   return NextResponse.json(data)
 }
