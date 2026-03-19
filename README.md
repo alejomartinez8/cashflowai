@@ -34,8 +34,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `AUTH_GOOGLE_ID` | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 | `GOOGLE_SHEETS_ID` | ID of the Google Sheet to use |
 | `ALLOWED_EMAIL` | Only this email address can log in |
 | `AUTH_SECRET` | NextAuth secret — generate with `npx auth secret` |

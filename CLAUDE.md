@@ -28,8 +28,10 @@ CashflowAI is a single-user AI financial assistant. The user chats with an AI th
 
 - NextAuth.js v5 (`auth.ts`) — Google OAuth requesting `spreadsheets.readonly` scope
 - The Google access token is stored in the JWT and reused for Sheets API calls — no service account
-- `proxy.ts` (the NextAuth middleware export) guards all routes except `/login` and `/api/auth/*`; only `ALLOWED_EMAIL` is allowed in
+- `proxy.ts` guards all routes except `/login` and `/api/auth/*`; only `ALLOWED_EMAIL` is allowed in
 - `types/next-auth.d.ts` extends the Session type to expose `accessToken`
+
+> **Next.js 16 convention:** The route guard file is `proxy.ts` with `export default`, **not** `middleware.ts`. Next.js 16 renamed the middleware convention from `middleware.ts` (Edge runtime) to `proxy.ts` (Node.js runtime). Do not rename or recreate it as `middleware.ts`.
 
 ### AI provider abstraction
 
@@ -75,8 +77,8 @@ The AI always responds in Colombian Spanish. Charts are embedded as a fenced ` `
 Copy `.env.local.example` to `.env.local`. Required:
 
 ```
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
 GOOGLE_SHEETS_ID=
 ALLOWED_EMAIL=           # only this email can log in
 AUTH_SECRET=             # generate: npx auth secret
