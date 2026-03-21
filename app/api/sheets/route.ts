@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
   }
 
   const tabsParam = req.nextUrl.searchParams.get('tabs')
+  const refresh = req.nextUrl.searchParams.get('refresh') === 'true'
+
   const requestedTabs = tabsParam
     ? tabsParam.split(',').map((t) => t.trim()).filter((t) => TABS.includes(t as TabName)) as TabName[]
     : []
@@ -22,6 +24,6 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const data = await loadTabs(requestedTabs)
+  const data = await loadTabs(requestedTabs, refresh)
   return NextResponse.json(data)
 }
