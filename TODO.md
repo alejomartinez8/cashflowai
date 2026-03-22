@@ -385,46 +385,8 @@ export const QUICK_PROMPTS = [
 
 Work through these tasks one at a time. Tell me "implement task N" for each one.
 
-- [x] Task 1 — Scaffold: Next.js 16 app with yarn, folder structure, `.env.local.example`,
-      `.gitignore`, `lib/types.ts`, `lib/formatters.ts`
-
-- [x] Task 2 — Auth: install `next-auth@beta`, create `auth.ts` with Google provider
-      requesting Sheets read scope, `proxy.ts` with single-email guard,
-      `app/login/page.tsx`, `app/api/auth/[...nextauth]/route.ts`
-
-- [x] Task 3 — Sheets client: `lib/sheets/client.ts` using session access token
-      (no service account), `loadTabs(tabs[])`, per-tab 5-min in-memory cache,
-      install `googleapis`
-
-- [x] Task 4 — Sheets route: `app/api/sheets/route.ts`, GET, `?tabs=` param,
-      `?refresh=true` support, protected — returns 401 if no valid session
-
-- [x] Task 5 — System prompt: `lib/ai/prompts.ts` with `buildSystemPrompt()`
-      (no data injected), financial freedom goal + chart rules + tool instructions
-
-- [x] Task 6 — AI providers: `lib/ai/providers.ts` with `getModel()`,
-      install `ai @ai-sdk/react @ai-sdk/anthropic @ai-sdk/openai @ai-sdk/google zod`
-
-- [ ] Task 7 — AI chat route: `app/api/ai/chat/route.ts`, POST, `streamText()`
-      with `get_sheet_data` tool, `stopWhen: stepCountIs(3)`, `toUIMessageStreamResponse()`, session-protected
-
-- [ ] Task 8 — Chat hook: `hooks/use-chat.ts` wrapping `useChat` from `@ai-sdk/react`,
-      localStorage history (max 50), exposes `messages`, `sendMessage`, `status`, `stop`, `clear`
-
 - [ ] Task 9 — Chart component: install `react-vega vega vega-lite`,
       `components/chat/ChartMessage.tsx`, responsive, graceful fallback
-
-- [ ] Task 10 — Chat components: `MessageBubble.tsx`, `ChatWindow.tsx`,
-      auto-scroll, typing indicator
-
-- [ ] Task 11 — Quick prompts: `components/chat/QuickPrompts.tsx`,
-      disappear after first message
-
-- [ ] Task 12 — Chat page: `app/chat/page.tsx`, full-height layout,
-      input fixed at bottom, Enter to send / Shift+Enter for newline
-
-- [ ] Task 13 — Layout: `app/layout.tsx`, minimal nav, user avatar + sign-out button,
-      app name, redirect `/` → `/chat`
 
 - [ ] Task 14 — Loading and errors: skeletons, toast on failure,
       Sheets quota error message in Spanish
