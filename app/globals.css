@@ -1,32 +1,38 @@
 @import "tailwindcss";
 
-/* Use class-based dark mode so next-themes can control it */
-@variant dark (&:where(.dark, .dark *));
+/* Class-based dark mode for next-themes */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
+  --background: #f6f7f9;
+  --foreground: #0f0f10;
+  --muted: #eeeef0;
+  --muted-foreground: #6b7280;
+  --border: #e2e4e9;
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
+  --card-foreground: #0f0f10;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --ring: #2563eb;
+  --surface: #ffffff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --border: #27272a;
-  --card: #18181b;
-  --card-foreground: #fafafa;
+  --background: #0c0c0e;
+  --foreground: #f4f4f6;
+  --muted: #1c1c20;
+  --muted-foreground: #8b8b99;
+  --border: #26262c;
+  --card: #16161a;
+  --card-foreground: #f4f4f6;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
   --ring: #3b82f6;
+  --surface: #1c1c21;
+  --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
 }
 
 @theme inline {
@@ -40,10 +46,37 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-ring: var(--ring);
+  --color-surface: var(--surface);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Prose overrides for markdown in chat bubbles */
+.chat-prose p { margin: 0.25rem 0; }
+.chat-prose p:first-child { margin-top: 0; }
+.chat-prose p:last-child { margin-bottom: 0; }
+.chat-prose ul { margin: 0.4rem 0; padding-left: 1.25rem; }
+.chat-prose ol { margin: 0.4rem 0; padding-left: 1.25rem; }
+.chat-prose li { margin: 0.15rem 0; }
+.chat-prose strong { font-weight: 600; }
+.chat-prose code {
+  font-size: 0.8em;
+  background: rgba(0,0,0,0.07);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+}
+.dark .chat-prose code {
+  background: rgba(255,255,255,0.1);
+}
+.chat-prose h1, .chat-prose h2, .chat-prose h3 {
+  font-weight: 600;
+  margin: 0.6rem 0 0.3rem;
+}
+.chat-prose h1:first-child,
+.chat-prose h2:first-child,
+.chat-prose h3:first-child { margin-top: 0; }
