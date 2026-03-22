@@ -35,6 +35,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-background">
+      {/* Main content area */}
       {isEmpty ? (
         <div className="flex flex-col flex-1 items-center justify-end pb-2">
           <div className="mb-6 text-center">
@@ -46,20 +47,21 @@ export default function ChatPage() {
             <h2 className="text-lg font-semibold text-foreground">¿En qué te ayudo hoy?</h2>
             <p className="text-sm text-muted-foreground mt-1">Pregunta sobre tu plan de libertad financiera 2032</p>
           </div>
-          <QuickPrompts onSelect={(p) => { sendMessage(p) }} />
+          <QuickPrompts onSelect={(p) => sendMessage(p)} />
         </div>
       ) : (
         <ChatWindow messages={messages} status={status} />
       )}
 
-      {/* Input area */}
-      <div
-        className="border-t border-border bg-card px-4 py-3"
-        style={{ boxShadow: '0 -1px 0 0 var(--border)' }}
-      >
-        <div className="max-w-3xl mx-auto">
+      {/* Bottom input area */}
+      <div className="border-t border-border bg-card px-4 pt-2 pb-3">
+        <div className="max-w-3xl mx-auto space-y-2">
+          {/* Compact suggestions — always visible */}
+          <QuickPrompts compact onSelect={(p) => sendMessage(p)} />
+
+          {/* Input row */}
           <div
-            className="flex items-end gap-2 rounded-2xl border border-border bg-background px-4 py-3 transition-shadow focus-within:border-primary/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.12)]"
+            className="flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2.5 transition-shadow focus-within:border-primary/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.12)]"
             style={{ boxShadow: 'var(--shadow-md)' }}
           >
             <textarea
@@ -69,35 +71,33 @@ export default function ChatPage() {
               onKeyDown={handleKeyDown}
               placeholder="Pregunta sobre tus finanzas..."
               rows={1}
-              className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none overflow-y-auto leading-relaxed"
+              className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none overflow-y-auto leading-5 self-center"
             />
-            <div className="flex items-center gap-1.5 pb-px">
-              {isStreaming ? (
-                <button
-                  onClick={stop}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="4" y="4" width="16" height="16" rx="2"/>
-                  </svg>
-                  Detener
-                </button>
-              ) : (
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 hover:opacity-90 transition-all active:scale-95 shadow-sm"
-                  aria-label="Enviar"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
-                  </svg>
-                </button>
-              )}
-            </div>
+            {isStreaming ? (
+              <button
+                onClick={stop}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="4" y="4" width="16" height="16" rx="2"/>
+                </svg>
+                Detener
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 hover:opacity-90 transition-all active:scale-95 shadow-sm"
+                aria-label="Enviar"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                </svg>
+              </button>
+            )}
           </div>
 
-          <div className="flex justify-between items-center mt-1.5 px-1">
+          <div className="flex justify-between items-center px-1">
             <p className="text-xs text-muted-foreground/60">Enter para enviar · Shift+Enter para nueva línea</p>
             {messages.length > 0 && (
               <button
