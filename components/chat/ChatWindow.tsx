@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { type CSSProperties, useEffect, useRef, type KeyboardEvent, type FormEvent } from 'react'
 import { useChat } from '@/hooks/use-chat'
 import { MessageBubble } from './MessageBubble'
 
@@ -13,11 +13,11 @@ export function ChatWindow() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (!isStreaming && input.trim()) {
-        handleSubmit(e as unknown as React.FormEvent)
+        handleSubmit(e as unknown as FormEvent)
       }
     }
   }
@@ -83,7 +83,7 @@ export function ChatWindow() {
             placeholder="Escribe un mensaje... (Enter para enviar)"
             rows={1}
             className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32 overflow-y-auto"
-            style={{ fieldSizing: 'content' } as React.CSSProperties}
+            style={{ fieldSizing: 'content' } as CSSProperties}
           />
           {isStreaming ? (
             <button

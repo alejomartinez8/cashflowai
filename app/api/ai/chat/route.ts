@@ -1,4 +1,4 @@
-import { streamText, stepCountIs } from 'ai'
+import { streamText, stepCountIs, tool } from 'ai'
 import { z } from 'zod'
 import { getModel } from '@/lib/ai/providers'
 import { buildSystemPrompt } from '@/lib/ai/prompts'
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     system: buildSystemPrompt(),
     messages,
     tools: {
-      get_sheet_data: {
+      get_sheet_data: tool({
         description: 'Fetch data from one or more Google Sheets tabs',
         parameters: z.object({
           tabs: z
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           const data = await loadTabs(tabs as TabName[])
           return data
         },
-      },
+      }),
     },
     stopWhen: stepCountIs(3),
   })
