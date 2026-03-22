@@ -9,11 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.63",
+    "@ai-sdk/google": "^3.0.52",
+    "@ai-sdk/openai": "^3.0.47",
+    "@ai-sdk/react": "^3.0.136",
+    "ai": "^6.0.134",
     "googleapis": "^171.4.0",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
