@@ -392,17 +392,17 @@ Work through these tasks one at a time. Tell me "implement task N" for each one.
       requesting Sheets read scope, `proxy.ts` with single-email guard,
       `app/login/page.tsx`, `app/api/auth/[...nextauth]/route.ts`
 
-- [ ] Task 3 — Sheets client: `lib/sheets/client.ts` using session access token
+- [x] Task 3 — Sheets client: `lib/sheets/client.ts` using session access token
       (no service account), `loadTabs(tabs[])`, per-tab 5-min in-memory cache,
       install `googleapis`
 
-- [ ] Task 4 — Sheets route: `app/api/sheets/route.ts`, GET, `?tabs=` param,
+- [x] Task 4 — Sheets route: `app/api/sheets/route.ts`, GET, `?tabs=` param,
       `?refresh=true` support, protected — returns 401 if no valid session
 
-- [ ] Task 5 — System prompt: `lib/ai/prompts.ts` with `buildSystemPrompt()`
+- [x] Task 5 — System prompt: `lib/ai/prompts.ts` with `buildSystemPrompt()`
       (no data injected), financial freedom goal + chart rules + tool instructions
 
-- [ ] Task 6 — AI providers: `lib/ai/providers.ts` with `getModel()`,
+- [x] Task 6 — AI providers: `lib/ai/providers.ts` with `getModel()`,
       install `ai @ai-sdk/react @ai-sdk/anthropic @ai-sdk/openai @ai-sdk/google zod`
 
 - [ ] Task 7 — AI chat route: `app/api/ai/chat/route.ts`, POST, `streamText()`
