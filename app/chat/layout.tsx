@@ -1,5 +1,6 @@
 import { auth, signOut } from '@/auth'
 import { ThemeToggle } from '@/components/theme-toggle'
+import Image from 'next/image'
 
 export default async function ChatLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -19,11 +20,12 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
           <ThemeToggle />
           <div className="w-px h-4 bg-border mx-1" />
           {session?.user?.image && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={session.user.image}
               alt={session.user.name ?? ''}
-              className="w-7 h-7 rounded-full ring-2 ring-border"
+              width={28}
+              height={28}
+              className="rounded-full ring-2 ring-border"
             />
           )}
           <span className="text-xs text-muted-foreground hidden sm:block max-w-[160px] truncate">
