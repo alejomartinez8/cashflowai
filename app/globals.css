@@ -56,6 +56,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
 /* Prose overrides for markdown in chat bubbles */
 .chat-prose p { margin: 0.25rem 0; }
 .chat-prose p:first-child { margin-top: 0; }
