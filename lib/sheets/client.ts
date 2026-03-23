@@ -17,8 +17,17 @@ export function clearCache(tab?: string) {
 
 async function getSheetsClient() {
   const session = await auth()
+
+  if (session?.error === 'RefreshAccessTokenError') {
+    throw new Error('AUTH_REFRESH_FAILED')
+  }
+
+  if (!session?.accessToken) {
+    throw new Error('AUTH_REQUIRED')
+  }
+
   const oauth2Client = new google.auth.OAuth2()
-  oauth2Client.setCredentials({ access_token: session?.accessToken })
+  oauth2Client.setCredentials({ access_token: session.accessToken })
   return google.sheets({ version: 'v4', auth: oauth2Client })
 }
 
