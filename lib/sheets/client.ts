@@ -1,16 +1,17 @@
 import { auth } from '@/auth'
 import { google } from 'googleapis'
-import { TABS, type TabName } from '@/lib/types'
 
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
-const cache = new Map<TabName, { data: string[][]; ts: number }>()
+const tabDataCache = new Map<string, { data: string[][]; ts: number }>()
+let tabListCache: { tabs: string[]; ts: number } | null = null
 
-export function clearCache(tab?: TabName) {
+export function clearCache(tab?: string) {
   if (tab) {
-    cache.delete(tab)
+    tabDataCache.delete(tab)
   } else {
-    cache.clear()
+    tabDataCache.clear()
+    tabListCache = null
   }
 }
 
@@ -21,9 +22,43 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth: oauth2Client })
 }
 
-async function getTab(tab: TabName, refresh = false): Promise<string[][]> {
+export async function listTabs(filter?: string): Promise<string[]> {
   const now = Date.now()
-  const cached = cache.get(tab)
+
+  if (!tabListCache || now - tabListCache.ts >= CACHE_TTL_MS) {
+    const sheets = await getSheetsClient()
+    const spreadsheetId = process.env.GOOGLE_SHEETS_ID!
+
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties.title',
+    })
+
+    const tabs = (response.data.sheets ?? [])
+      .map((s) => s.properties?.title ?? '')
+      .filter(Boolean)
+
+    tabListCache = { tabs, ts: now }
+  }
+
+  const allTabs = tabListCache.tabs
+  if (!filter) return allTabs
+
+  const lowerFilter = filter.toLowerCase()
+  return allTabs.filter((t) => t.toLowerCase().includes(lowerFilter))
+}
+
+function findSimilarTabs(name: string, available: string[]): string[] {
+  const lower = name.toLowerCase()
+  return available.filter((t) => {
+    const tLower = t.toLowerCase()
+    return tLower.includes(lower) || lower.includes(tLower)
+  })
+}
+
+async function getTab(tab: string, refresh = false): Promise<string[][]> {
+  const now = Date.now()
+  const cached = tabDataCache.get(tab)
 
   if (!refresh && cached && now - cached.ts < CACHE_TTL_MS) {
     return cached.data
@@ -32,20 +67,47 @@ async function getTab(tab: TabName, refresh = false): Promise<string[][]> {
   const sheets = await getSheetsClient()
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID!
 
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: tab,
-  })
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: tab,
+    })
 
-  const data = (response.data.values ?? []) as string[][]
-  cache.set(tab, { data, ts: now })
-  return data
+    const data = (response.data.values ?? []) as string[][]
+    tabDataCache.set(tab, { data, ts: now })
+    return data
+  } catch (err: unknown) {
+    const isNotFound =
+      typeof err === 'object' &&
+      err !== null &&
+      'code' in err &&
+      (err as { code: number }).code === 400
+
+    if (isNotFound) {
+      const available = await listTabs()
+      const similar = findSimilarTabs(tab, available)
+      const suggestion =
+        similar.length > 0 ? ` Did you mean: ${similar.map((t) => `'${t}'`).join(', ')}?` : ''
+      throw new Error(
+        `Tab '${tab}' not found. Available tabs: ${JSON.stringify(available)}.${suggestion}`,
+      )
+    }
+    throw err
+  }
 }
 
-export async function loadTabs(tabs: TabName[], refresh = false): Promise<Record<TabName, string[][]>> {
-  const results = await Promise.all(tabs.map((tab) => getTab(tab, refresh)))
-  return Object.fromEntries(tabs.map((tab, i) => [tab, results[i]])) as Record<TabName, string[][]>
+export async function loadTabs(
+  tabs: string[],
+  refresh = false,
+): Promise<Record<string, string[][] | { error: string }>> {
+  const results = await Promise.allSettled(tabs.map((tab) => getTab(tab, refresh)))
+  return Object.fromEntries(
+    tabs.map((tab, i) => {
+      const result = results[i]
+      return [
+        tab,
+        result.status === 'fulfilled' ? result.value : { error: (result.reason as Error).message },
+      ]
+    }),
+  )
 }
-
-export { TABS }
-export type { TabName }

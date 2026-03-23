@@ -1,6 +1,5 @@
 import { auth } from '@/auth'
-import { loadTabs, TABS } from '@/lib/sheets/client'
-import type { TabName } from '@/lib/types'
+import { loadTabs, listTabs } from '@/lib/sheets/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -13,16 +12,18 @@ export async function GET(req: NextRequest) {
   const tabsParam = req.nextUrl.searchParams.get('tabs')
   const refresh = req.nextUrl.searchParams.get('refresh') === 'true'
 
-  const requestedTabs = tabsParam
-    ? tabsParam.split(',').map((t) => t.trim()).filter((t) => TABS.includes(t as TabName)) as TabName[]
-    : []
-
-  if (requestedTabs.length === 0) {
+  if (!tabsParam) {
+    const available = await listTabs()
     return NextResponse.json(
-      { error: `No valid tabs requested. Available: ${TABS.join(', ')}` },
-      { status: 400 }
+      { error: `No tabs requested. Available: ${available.join(', ')}` },
+      { status: 400 },
     )
   }
+
+  const requestedTabs = tabsParam
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
 
   const data = await loadTabs(requestedTabs, refresh)
   return NextResponse.json(data)
