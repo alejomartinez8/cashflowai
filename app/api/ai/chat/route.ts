@@ -12,55 +12,75 @@ export async function POST(req: Request) {
   const providerHeader = req.headers.get('x-ai-provider') ?? undefined
   const modelHeader = req.headers.get('x-ai-model') ?? undefined
 
-  const { messages: uiMessages } = await req.json()
-  const messages = await convertToModelMessages(uiMessages) // type says Promise<> at runtime
+  let uiMessages: unknown[]
+  try {
+    const body = await req.json()
+    uiMessages = body.messages
+  } catch (err) {
+    console.error('[chat] Error al parsear el cuerpo de la solicitud:', err)
+    return new Response('Solicitud inválida', { status: 400 })
+  }
 
-  const result = await streamText({
-    model: getModel(providerHeader, modelHeader),
-    system: buildSystemPrompt(),
-    messages,
-    tools: {
-      get_current_date: tool({
-        description:
-          'Returns the current date and time. Call this tool whenever the user asks something time-sensitive (e.g. "this month", "this year", "today", "how many months left"). Always call this before making date-based calculations.',
-        inputSchema: z.object({}),
-        execute: async () => {
-          const now = new Date()
-          return {
-            iso: now.toISOString(),
-            date: now.toISOString().slice(0, 10),
-            year: now.getFullYear(),
-            month: now.getMonth() + 1,
-            day: now.getDate(),
-          }
-        },
-      }),
-      list_available_tabs: tool({
-        description:
-          'Lists all available tabs/sheets in the Google Spreadsheet. Use this when uncertain about what tabs exist, or when the user mentions a concept you don\'t recognize. Supports optional filtering by name.',
-        inputSchema: z.object({
-          filter: z
-            .string()
-            .optional()
-            .describe('Optional search term to filter tab names (case-insensitive substring match)'),
-        }),
-        execute: async ({ filter }) => listTabs(filter),
-      }),
-      get_sheet_data: tool({
-        description:
-          'Carga tabs del Google Sheet del usuario. Llama esta herramienta antes de responder cualquier pregunta sobre datos financieros. Usa list_available_tabs() primero si no estás seguro de qué tabs existen.',
-        inputSchema: z.object({
-          tabs: z
-            .array(z.string())
-            .describe(
-              'Tabs a cargar. Usa list_available_tabs() primero para ver las opciones disponibles.',
-            ),
-        }),
-        execute: async ({ tabs }) => loadTabs(tabs),
-      }),
-    },
-    stopWhen: stepCountIs(5),
-  })
+  let messages: Awaited<ReturnType<typeof convertToModelMessages>>
+  try {
+    messages = await convertToModelMessages(uiMessages)
+  } catch (err) {
+    console.error('[chat] Error al convertir mensajes:', err)
+    return new Response('Formato de mensajes inválido', { status: 400 })
+  }
 
-  return result.toUIMessageStreamResponse()
+  try {
+    const result = await streamText({
+      model: getModel(providerHeader, modelHeader),
+      system: buildSystemPrompt(),
+      messages,
+      tools: {
+        get_current_date: tool({
+          description:
+            'Returns the current date and time. Call this tool whenever the user asks something time-sensitive (e.g. "this month", "this year", "today", "how many months left"). Always call this before making date-based calculations.',
+          inputSchema: z.object({}),
+          execute: async () => {
+            const now = new Date()
+            return {
+              iso: now.toISOString(),
+              date: now.toISOString().slice(0, 10),
+              year: now.getFullYear(),
+              month: now.getMonth() + 1,
+              day: now.getDate(),
+            }
+          },
+        }),
+        list_available_tabs: tool({
+          description:
+            'Lists all available tabs/sheets in the Google Spreadsheet. Use this when uncertain about what tabs exist, or when the user mentions a concept you don\'t recognize. Supports optional filtering by name.',
+          inputSchema: z.object({
+            filter: z
+              .string()
+              .optional()
+              .describe('Optional search term to filter tab names (case-insensitive substring match)'),
+          }),
+          execute: async ({ filter }) => listTabs(filter),
+        }),
+        get_sheet_data: tool({
+          description:
+            'Carga tabs del Google Sheet del usuario. Llama esta herramienta antes de responder cualquier pregunta sobre datos financieros. Usa list_available_tabs() primero si no estás seguro de qué tabs existen.',
+          inputSchema: z.object({
+            tabs: z
+              .array(z.string())
+              .describe(
+                'Tabs a cargar. Usa list_available_tabs() primero para ver las opciones disponibles.',
+              ),
+          }),
+          execute: async ({ tabs }) => loadTabs(tabs),
+        }),
+      },
+      stopWhen: stepCountIs(5),
+    })
+
+    return result.toUIMessageStreamResponse()
+  } catch (err) {
+    console.error('[chat] Error en streamText:', err)
+    const message = err instanceof Error ? err.message : 'Error desconocido'
+    return new Response(`Error al procesar la solicitud: ${message}`, { status: 500 })
+  }
 }

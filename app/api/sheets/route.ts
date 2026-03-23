@@ -13,11 +13,17 @@ export async function GET(req: NextRequest) {
   const refresh = req.nextUrl.searchParams.get('refresh') === 'true'
 
   if (!tabsParam) {
-    const available = await listTabs()
-    return NextResponse.json(
-      { error: `No tabs requested. Available: ${available.join(', ')}` },
-      { status: 400 },
-    )
+    try {
+      const available = await listTabs()
+      return NextResponse.json(
+        { error: `No tabs requested. Available: ${available.join(', ')}` },
+        { status: 400 },
+      )
+    } catch (err) {
+      console.error('[sheets] Error al listar hojas:', err)
+      const message = err instanceof Error ? err.message : 'Error desconocido'
+      return NextResponse.json({ error: message }, { status: 500 })
+    }
   }
 
   const requestedTabs = tabsParam
@@ -25,6 +31,12 @@ export async function GET(req: NextRequest) {
     .map((t) => t.trim())
     .filter(Boolean)
 
-  const data = await loadTabs(requestedTabs, refresh)
-  return NextResponse.json(data)
+  try {
+    const data = await loadTabs(requestedTabs, refresh)
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('[sheets] Error al cargar hojas:', err)
+    const message = err instanceof Error ? err.message : 'Error desconocido'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }

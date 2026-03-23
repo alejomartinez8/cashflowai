@@ -17,7 +17,8 @@ export default function ChartMessage({ spec }: Props) {
     let parsed: VisualizationSpec
     try {
       parsed = JSON.parse(spec) as VisualizationSpec
-    } catch {
+    } catch (err) {
+      console.error('[ChartMessage] Error al parsear el spec del gráfico:', err)
       setError(true)
       return
     }
@@ -36,7 +37,10 @@ export default function ChartMessage({ spec }: Props) {
             vegaView = result.view
           }
         })
-        .catch(() => setError(true))
+        .catch((err: unknown) => {
+          console.error('[ChartMessage] Error al renderizar con vega-embed:', err)
+          setError(true)
+        })
     })
 
     return () => {

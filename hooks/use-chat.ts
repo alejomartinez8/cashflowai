@@ -47,9 +47,14 @@ export function useChat() {
     transport,
     messages: storedMessages,
     onError(error) {
+      console.error('[useChat] Error:', error)
       const msg = error?.message ?? ''
       if (msg.includes('quota') || msg.includes('429')) {
         toast.error('Se agotó la cuota de Google Sheets. Intenta en unos minutos.')
+      } else if (msg.includes('Unauthorized') || msg.includes('401')) {
+        toast.error('Tu sesión expiró. Por favor, recarga la página e inicia sesión nuevamente.')
+      } else if (msg) {
+        toast.error(`Error: ${msg}`)
       } else {
         toast.error('Ocurrió un error al procesar tu solicitud.')
       }
