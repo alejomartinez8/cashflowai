@@ -66,6 +66,7 @@ body {
 }
 
 /* Prose overrides for markdown in chat bubbles */
+.chat-prose { overflow-wrap: break-word; word-break: break-word; min-w: 0; }
 .chat-prose p { margin: 0.25rem 0; }
 .chat-prose p:first-child { margin-top: 0; }
 .chat-prose p:last-child { margin-bottom: 0; }
@@ -78,6 +79,7 @@ body {
   background: rgba(0,0,0,0.07);
   border-radius: 4px;
   padding: 0.1em 0.3em;
+  overflow-wrap: anywhere;
 }
 .dark .chat-prose code {
   background: rgba(255,255,255,0.1);

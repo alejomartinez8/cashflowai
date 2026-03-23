@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai'
 import ReactMarkdown from 'react-markdown'
+import ChartMessage from './ChartMessage'
 
 interface Props {
   message: UIMessage
@@ -10,6 +11,14 @@ function extractText(message: UIMessage): string {
     .filter((p) => p.type === 'text')
     .map((p) => (p as { type: 'text'; text: string }).text)
     .join('')
+}
+
+function splitChartBlock(text: string): { prose: string; chartSpec: string | null } {
+  const match = text.match(/^([\s\S]*?)```chart\s*\n([\s\S]*?)\n```\s*$/m)
+  if (match) {
+    return { prose: match[1].trim(), chartSpec: match[2].trim() }
+  }
+  return { prose: text, chartSpec: null }
 }
 
 const BotIcon = () => (
@@ -37,18 +46,21 @@ export default function MessageBubble({ message }: Props) {
     )
   }
 
+  const { prose, chartSpec } = splitChartBlock(text)
+
   return (
     <div className="flex justify-start gap-3 items-start">
       <BotIcon />
       <div
-        className="max-w-[78%] rounded-2xl rounded-tl-sm px-4 py-3 text-sm chat-prose border border-border"
+        className="min-w-0 max-w-[78%] rounded-2xl rounded-tl-sm px-4 py-3 text-sm chat-prose border border-border"
         style={{
           background: 'var(--card)',
           color: 'var(--card-foreground)',
           boxShadow: 'var(--shadow)',
         }}
       >
-        <ReactMarkdown>{text}</ReactMarkdown>
+        {prose && <ReactMarkdown>{prose}</ReactMarkdown>}
+        {chartSpec && <ChartMessage spec={chartSpec} />}
       </div>
     </div>
   )
