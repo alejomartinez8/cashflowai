@@ -57,13 +57,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       // Token still valid
-      if (Date.now() < (token.accessTokenExpires ?? 0)) {
+      const expires = token.accessTokenExpires as number | undefined
+      if (Date.now() < (expires ?? 0)) {
         return token
       }
 
       // Token expired — refresh it
       try {
-        return await refreshAccessToken(token)
+        return await refreshAccessToken(token as Parameters<typeof refreshAccessToken>[0])
       } catch {
         return { ...token, error: 'RefreshAccessTokenError' }
       }
