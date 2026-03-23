@@ -39,8 +39,12 @@ export default function ChatWindow({ messages, status }: Props) {
   return (
     <Conversation className="flex-1">
       <ConversationContent className="max-w-3xl mx-auto w-full">
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+        {messages.map((msg, idx) => (
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            isStreaming={isLoading && idx === messages.length - 1}
+          />
         ))}
         {isLoading && <TypingIndicator />}
       </ConversationContent>

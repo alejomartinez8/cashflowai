@@ -8,6 +8,7 @@ import {
 
 interface Props {
   message: UIMessage
+  isStreaming?: boolean
 }
 
 function extractText(message: UIMessage): string {
@@ -34,7 +35,7 @@ const BotIcon = () => (
   </div>
 )
 
-export default function MessageBubble({ message }: Props) {
+export default function MessageBubble({ message, isStreaming }: Props) {
   const isUser = message.role === 'user'
   const text = extractText(message)
 
@@ -62,7 +63,7 @@ export default function MessageBubble({ message }: Props) {
             className="rounded-2xl rounded-tl-sm px-4 py-3 border border-border w-full max-w-full"
             style={{ background: 'var(--card)', color: 'var(--card-foreground)', boxShadow: 'var(--shadow)' }}
           >
-            {prose && <MessageResponse>{prose}</MessageResponse>}
+            {prose && <MessageResponse isAnimating={isStreaming}>{prose}</MessageResponse>}
           </MessageContent>
           {chartSpec && <ChartMessage spec={chartSpec} />}
         </div>
