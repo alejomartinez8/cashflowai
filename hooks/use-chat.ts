@@ -2,7 +2,7 @@
 
 import { useChat as useAiChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { UIMessage } from 'ai'
 
 const STORAGE_KEY = 'cashflowai_messages'
@@ -23,8 +23,9 @@ function saveToStorage(messages: UIMessage[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
 }
 
+const storedMessages = loadFromStorage()
+
 export function useChat() {
-  const initialMessages = useRef<UIMessage[]>(loadFromStorage())
   const [input, setInput] = useState('')
 
   const transport = useMemo(
@@ -34,7 +35,7 @@ export function useChat() {
 
   const { messages, sendMessage, status, stop, setMessages } = useAiChat({
     transport,
-    messages: initialMessages.current,
+    messages: storedMessages,
   })
 
   useEffect(() => {
