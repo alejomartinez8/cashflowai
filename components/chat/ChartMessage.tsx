@@ -24,9 +24,12 @@ export default function ChartMessage({ spec }: Props) {
     )
   }
 
+  // Force container width for responsiveness
+  const responsive = { ...parsed, width: 'container' } as VisualizationSpec
+
   return (
-    <div className="mt-3 overflow-x-auto rounded-xl border border-border bg-card p-3">
-      <VegaEmbed spec={parsed} options={{ actions: false }} />
+    <div className="mt-3 w-full rounded-xl border border-border bg-card p-3">
+      <VegaEmbed spec={responsive} options={{ actions: false }} />
     </div>
   )
 }

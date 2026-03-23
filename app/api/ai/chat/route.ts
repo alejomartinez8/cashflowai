@@ -9,11 +9,14 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session) return new Response('Unauthorized', { status: 401 })
 
+  const providerHeader = req.headers.get('x-ai-provider') ?? undefined
+  const modelHeader = req.headers.get('x-ai-model') ?? undefined
+
   const { messages: uiMessages } = await req.json()
   const messages = await convertToModelMessages(uiMessages) // type says Promise<> at runtime
 
   const result = await streamText({
-    model: getModel(),
+    model: getModel(providerHeader, modelHeader),
     system: buildSystemPrompt(),
     messages,
     tools: {

@@ -4,6 +4,8 @@ import { useChat as useAiChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useEffect, useMemo, useState } from 'react'
 import type { UIMessage } from 'ai'
+import { toast } from 'sonner'
+import { useModelPreference } from './use-model-preference'
 
 const STORAGE_KEY = 'cashflowai_messages'
 const MAX_MESSAGES = 50
@@ -27,15 +29,31 @@ const storedMessages = loadFromStorage()
 
 export function useChat() {
   const [input, setInput] = useState('')
+  const { provider, model } = useModelPreference()
 
   const transport = useMemo(
-    () => new DefaultChatTransport({ api: '/api/ai/chat' }),
-    [],
+    () =>
+      new DefaultChatTransport({
+        api: '/api/ai/chat',
+        headers: {
+          'x-ai-provider': provider,
+          'x-ai-model': model,
+        },
+      }),
+    [provider, model],
   )
 
   const { messages, sendMessage, status, stop, setMessages } = useAiChat({
     transport,
     messages: storedMessages,
+    onError(error) {
+      const msg = error?.message ?? ''
+      if (msg.includes('quota') || msg.includes('429')) {
+        toast.error('Se agotó la cuota de Google Sheets. Intenta en unos minutos.')
+      } else {
+        toast.error('Ocurrió un error al procesar tu solicitud.')
+      }
+    },
   })
 
   useEffect(() => {
