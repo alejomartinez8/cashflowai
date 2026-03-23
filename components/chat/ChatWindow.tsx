@@ -1,7 +1,11 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import type { UIMessage } from 'ai'
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation'
 import MessageBubble from './MessageBubble'
 
 interface Props {
@@ -30,22 +34,21 @@ const TypingIndicator = () => (
 )
 
 export default function ChatWindow({ messages, status }: Props) {
-  const bottomRef = useRef<HTMLDivElement>(null)
   const isLoading = status === 'submitted' || status === 'streaming'
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
-
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6">
-      <div className="max-w-3xl mx-auto space-y-5">
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+    <Conversation className="flex-1">
+      <ConversationContent className="max-w-3xl mx-auto w-full">
+        {messages.map((msg, idx) => (
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            isStreaming={isLoading && idx === messages.length - 1}
+          />
         ))}
         {isLoading && <TypingIndicator />}
-        <div ref={bottomRef} />
-      </div>
-    </div>
+      </ConversationContent>
+      <ConversationScrollButton />
+    </Conversation>
   )
 }
