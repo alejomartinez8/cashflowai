@@ -9,7 +9,7 @@ interface Props {
 
 export default function ChartMessage({ spec }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [error, setError] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -17,8 +17,8 @@ export default function ChartMessage({ spec }: Props) {
     let parsed: VisualizationSpec
     try {
       parsed = JSON.parse(spec) as VisualizationSpec
-    } catch {
-      setError(true)
+    } catch (e) {
+      setErrorMsg(`Especificación inválida: ${e instanceof Error ? e.message : 'JSON malformado'}`)
       return
     }
 
@@ -36,7 +36,7 @@ export default function ChartMessage({ spec }: Props) {
             vegaView = result.view
           }
         })
-        .catch(() => setError(true))
+        .catch((e: unknown) => setErrorMsg(`Error de renderizado: ${e instanceof Error ? e.message : 'desconocido'}`))
     })
 
     return () => {
@@ -45,11 +45,12 @@ export default function ChartMessage({ spec }: Props) {
     }
   }, [spec])
 
-  if (error) {
+  if (errorMsg) {
     return (
-      <p className="text-xs text-muted-foreground italic">
-        Error al renderizar el gráfico.
-      </p>
+      <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+        <p className="text-xs font-medium text-destructive">Error al renderizar el gráfico</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{errorMsg}</p>
+      </div>
     )
   }
 
