@@ -4,10 +4,14 @@ import { auth } from '@/auth'
 import { getModel } from '@/lib/ai/providers'
 import { buildSystemPrompt } from '@/lib/ai/prompts'
 import { loadTabs, listTabs } from '@/lib/sheets/client'
+import { TOOL_NAMES } from '@/lib/constants'
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session) return new Response('Unauthorized', { status: 401 })
+  if (session.user?.email !== process.env.ALLOWED_EMAIL) {
+    return new Response('Forbidden', { status: 403 })
+  }
 
   const providerHeader = req.headers.get('x-ai-provider') ?? undefined
   const modelHeader = req.headers.get('x-ai-model') ?? undefined
@@ -21,7 +25,7 @@ export async function POST(req: Request) {
       system: buildSystemPrompt(),
       messages,
       tools: {
-        get_current_date: tool({
+        [TOOL_NAMES.GET_CURRENT_DATE]: tool({
           description:
             'Returns the current date and time. Call this tool whenever the user asks something time-sensitive (e.g. "this month", "this year", "today", "how many months left"). Always call this before making date-based calculations.',
           inputSchema: z.object({}),
@@ -36,7 +40,7 @@ export async function POST(req: Request) {
             }
           },
         }),
-        list_available_tabs: tool({
+        [TOOL_NAMES.LIST_AVAILABLE_TABS]: tool({
           description:
             'Lists all available tabs/sheets in the Google Spreadsheet. Use this when uncertain about what tabs exist, or when the user mentions a concept you don\'t recognize. Supports optional filtering by name.',
           inputSchema: z.object({
@@ -47,7 +51,7 @@ export async function POST(req: Request) {
           }),
           execute: async ({ filter }) => listTabs(filter),
         }),
-        get_sheet_data: tool({
+        [TOOL_NAMES.GET_SHEET_DATA]: tool({
           description:
             'Carga tabs del Google Sheet del usuario. Llama esta herramienta antes de responder cualquier pregunta sobre datos financieros. Usa list_available_tabs() primero si no estás seguro de qué tabs existen.',
           inputSchema: z.object({
@@ -67,6 +71,8 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     const lowerMsg = message.toLowerCase()
+    const statusCode = (err as { status?: number; statusCode?: number }).status
+      ?? (err as { status?: number; statusCode?: number }).statusCode
 
     if (message.includes('AUTH_REQUIRED')) {
       return Response.json(
@@ -74,13 +80,13 @@ export async function POST(req: Request) {
         { status: 401 },
       )
     }
-    if (lowerMsg.includes('api key') || lowerMsg.includes('api_key') || lowerMsg.includes('authentication failed') || lowerMsg.includes('invalid x-api-key')) {
+    if (statusCode === 401 || lowerMsg.includes('api key') || lowerMsg.includes('api_key') || lowerMsg.includes('authentication failed') || lowerMsg.includes('invalid x-api-key')) {
       return Response.json(
         { error: 'API key inválida o no configurada.', code: 'INVALID_API_KEY' },
         { status: 401 },
       )
     }
-    if (lowerMsg.includes('429') || lowerMsg.includes('rate limit') || lowerMsg.includes('quota')) {
+    if (statusCode === 429 || lowerMsg.includes('429') || lowerMsg.includes('rate limit') || lowerMsg.includes('quota')) {
       return Response.json(
         { error: 'Límite de uso alcanzado. Intenta en unos minutos.', code: 'RATE_LIMIT' },
         { status: 429 },

@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import type { VisualizationSpec } from 'vega-embed'
 
 interface Props {
   spec: string
 }
 
-export default function ChartMessage({ spec }: Props) {
+function ChartMessage({ spec }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -19,6 +20,7 @@ export default function ChartMessage({ spec }: Props) {
       parsed = JSON.parse(spec) as VisualizationSpec
     } catch (e) {
       setErrorMsg(`Especificación inválida: ${e instanceof Error ? e.message : 'JSON malformado'}`)
+      setLoading(false)
       return
     }
 
@@ -34,9 +36,13 @@ export default function ChartMessage({ spec }: Props) {
             result.view.finalize()
           } else {
             vegaView = result.view
+            setLoading(false)
           }
         })
-        .catch((e: unknown) => setErrorMsg(`Error de renderizado: ${e instanceof Error ? e.message : 'desconocido'}`))
+        .catch((e: unknown) => {
+          setErrorMsg(`Error de renderizado: ${e instanceof Error ? e.message : 'desconocido'}`)
+          setLoading(false)
+        })
     })
 
     return () => {
@@ -56,7 +62,15 @@ export default function ChartMessage({ spec }: Props) {
 
   return (
     <div className="mt-3 w-full rounded-xl border border-border bg-card p-3">
+      {loading && (
+        <div className="animate-pulse space-y-2 py-2">
+          <div className="h-4 w-1/3 rounded bg-muted" />
+          <div className="h-40 w-full rounded bg-muted" />
+        </div>
+      )}
       <div ref={containerRef} className="w-full" />
     </div>
   )
 }
+
+export default memo(ChartMessage, (prev, next) => prev.spec === next.spec)

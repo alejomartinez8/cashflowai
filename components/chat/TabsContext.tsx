@@ -29,7 +29,7 @@ export function TabsContext({ part, className }: { part: AnyToolPart; className?
       )}
     >
       <DatabaseIcon className="size-4 text-muted-foreground shrink-0" />
-      <span className="text-xs font-medium text-muted-foreground shrink-0">Reviewing</span>
+      <span className="text-xs font-medium text-muted-foreground shrink-0">Consultando</span>
       <div className="flex flex-wrap gap-1.5 min-w-0 flex-1">
         {!tabs || tabs.length === 0 ? (
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground">

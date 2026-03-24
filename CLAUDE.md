@@ -33,14 +33,10 @@ CashflowAI is a single-user AI financial assistant. The user chats with an AI th
 
 > **Next.js 16 convention:** The route guard file is `proxy.ts` with `export default`, **not** `middleware.ts`. Next.js 16 renamed the middleware convention from `middleware.ts` (Edge runtime) to `proxy.ts` (Node.js runtime). Do not rename or recreate it as `middleware.ts`.
 
-### AI provider abstraction
+### Model selection
 
-`lib/ai/providers.ts` (not yet created — Task 6) must expose `getModel()`. Never hardcode model names outside that file. Switch provider/model via env vars:
-
-```
-AI_PROVIDER=anthropic   # anthropic | openai | google
-AI_MODEL=claude-sonnet-4-5
-```
+Model is selected via URL search param `?model=provider:model-id` (e.g. `?model=anthropic:claude-sonnet-4-6`).
+Available providers are detected server-side in `app/chat/layout.tsx` by checking which API keys are set in env, then passed as props to `ModelSwitcher`. The selection persists in `localStorage` and syncs back to the URL on navigation. `lib/ai/providers.ts` exposes `getModel(provider, model)` — never hardcode model names outside that file.
 
 ### Sheets loading strategy
 
@@ -71,10 +67,13 @@ The AI always responds in Colombian Spanish. Charts are embedded as a fenced ` `
 | `lib/types.ts` | `TabName`, `ChatMessage` |
 | `lib/formatters.ts` | `formatCOP`, `formatMillions`, `formatPercentage` |
 | `types/next-auth.d.ts` | Session type augmentation for `accessToken` |
+| `lib/ai/providers.ts` | `getModel(provider, model)` — provider abstraction |
+| `lib/ai/prompts.ts` | `buildSystemPrompt()` — generic system prompt, no personal data |
+| `hooks/use-model-preference.ts` | Model selection via URL search params + localStorage sync |
 
 ## Environment variables
 
-Copy `.env.local.example` to `.env.local`. Required:
+Copy `.env.example` to `.env.local`. Required:
 
 ```
 AUTH_GOOGLE_ID=
@@ -82,11 +81,15 @@ AUTH_GOOGLE_SECRET=
 GOOGLE_SHEETS_ID=
 ALLOWED_EMAIL=           # only this email can log in
 AUTH_SECRET=             # generate: npx auth secret
-AI_PROVIDER=anthropic
-AI_MODEL=claude-sonnet-4-5
-ANTHROPIC_API_KEY=       # or OPENAI_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY
+ANTHROPIC_API_KEY=       # at least one provider key required
+OPENAI_API_KEY=          # optional
+GOOGLE_GENERATIVE_AI_API_KEY=  # optional
 ```
 
-## Implementation status
+## Roadmap (future PRs)
 
-Tasks are tracked in `TODO.md`. Completed: Task 1 (scaffold), Task 2 (auth). Remaining: Tasks 3–16 (Sheets client, AI providers, API routes, UI components).
+- **Goals v2** — editable financial goals stored in DB (removed from hardcoded prompt in cleanup PR)
+- **Persistence** — save conversation history and user config in a lightweight DB (Turso/Neon)
+- **Multi-user** — extend auth beyond single `ALLOWED_EMAIL`
+- **Generic context** — user profile (name, goals, sheet structure) configurable via UI, not hardcoded
+- **API routes → Server Actions** — migrate remaining `/api` routes (e.g. `app/api/ai/chat/route.ts`) to Server Actions where possible, following Next.js 16 conventions

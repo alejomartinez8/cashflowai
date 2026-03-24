@@ -3,8 +3,17 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { ModelSwitcher } from '@/components/chat/ModelSwitcher'
 import Image from 'next/image'
 
+function getAvailableProviders(): string[] {
+  const available: string[] = []
+  if (process.env.ANTHROPIC_API_KEY) available.push('anthropic')
+  if (process.env.OPENAI_API_KEY) available.push('openai')
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) available.push('google')
+  return available
+}
+
 export default async function ChatLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
+  const availableProviders = getAvailableProviders()
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -18,7 +27,7 @@ export default async function ChatLayout({ children }: { children: React.ReactNo
           <span className="font-semibold text-sm tracking-tight">CashflowAI</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <ModelSwitcher />
+          <ModelSwitcher availableProviders={availableProviders} />
           <ThemeToggle />
           <div className="w-px h-4 bg-border mx-0.5" />
           {session?.user?.image && (

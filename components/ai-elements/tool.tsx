@@ -83,7 +83,7 @@ function JsonBlock({ value }: { value: unknown }) {
   const text =
     typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return (
-    <pre className="overflow-x-auto rounded-md bg-muted/50 p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words">
+    <pre className="overflow-x-auto overflow-y-auto max-h-48 rounded-md bg-muted/50 p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words">
       {text}
     </pre>
   );

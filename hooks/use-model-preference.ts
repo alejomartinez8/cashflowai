@@ -1,6 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+const STORAGE_KEY = 'cashflowai_model'
 
 export interface ModelOption {
   provider: string
@@ -14,36 +17,52 @@ export const MODELS: ModelOption[] = [
   { provider: 'anthropic', model: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5',  contextWindow: 200_000 },
   { provider: 'openai',    model: 'gpt-4o',                    label: 'GPT-4o',             contextWindow: 128_000 },
   { provider: 'openai',    model: 'gpt-4o-mini',               label: 'GPT-4o mini',        contextWindow: 128_000 },
-  { provider: 'google',    model: 'gemini-2.0-flash',          label: 'Gemini 2.0 Flash',   contextWindow: 1_048_576 },
+  { provider: 'google',    model: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite', contextWindow: 1_048_576 },
 ]
 
-const STORAGE_KEY = 'cashflowai_model'
 const DEFAULT = MODELS[0]
 
-function readFromStorage(): ModelOption {
-  if (typeof window === 'undefined') return DEFAULT
+function readFromStorage(): ModelOption | null {
+  if (typeof window === 'undefined') return null
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT
+    if (!raw) return null
     const saved = JSON.parse(raw) as ModelOption
-    const found = MODELS.find((m) => m.provider === saved.provider && m.model === saved.model)
-    return found ?? DEFAULT
+    return MODELS.find((m) => m.provider === saved.provider && m.model === saved.model) ?? null
   } catch {
-    return DEFAULT
+    return null
   }
 }
 
 export function useModelPreference() {
-  const [selected, setSelected] = useState<ModelOption>(DEFAULT)
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
+  const selected = useMemo(() => {
+    const param = searchParams?.get('model')
+    if (!param) return readFromStorage() ?? DEFAULT
+    const colonIdx = param.indexOf(':')
+    if (colonIdx === -1) return DEFAULT
+    const provider = param.slice(0, colonIdx)
+    const model = param.slice(colonIdx + 1)
+    return MODELS.find((m) => m.provider === provider && m.model === model) ?? DEFAULT
+  }, [searchParams])
+
+  // Sync URL when there's no model param (e.g. navigating to /chat directly)
   useEffect(() => {
-    setSelected(readFromStorage())
-  }, [])
+    if (!searchParams?.get('model')) {
+      const params = new URLSearchParams(searchParams?.toString() ?? '')
+      params.set('model', `${selected.provider}:${selected.model}`)
+      router.replace(`?${params.toString()}`)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setModel = useCallback((option: ModelOption) => {
-    setSelected(option)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(option))
-  }, [])
+    const params = new URLSearchParams(searchParams?.toString() ?? '')
+    params.set('model', `${option.provider}:${option.model}`)
+    router.replace(`?${params.toString()}`)
+  }, [router, searchParams])
 
   return { provider: selected.provider, model: selected.model, selected, setModel }
 }
