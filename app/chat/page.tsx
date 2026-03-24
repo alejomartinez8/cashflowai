@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useChat } from '@/hooks/use-chat'
 import ChatWindow from '@/components/chat/ChatWindow'
 import QuickPrompts from '@/components/chat/QuickPrompts'
+import GoalsPanel from '@/components/goals/GoalsPanel'
 import { cn } from '@/lib/utils'
 
 export default function ChatPage() {
@@ -38,8 +39,8 @@ export default function ChatPage() {
     <div className="flex flex-col flex-1 overflow-hidden bg-background">
       {/* Main content area */}
       {isEmpty ? (
-        <div className="flex flex-col flex-1 items-center justify-end pb-2">
-          <div className="mb-6 text-center">
+        <div className="flex flex-col flex-1 items-center justify-end pb-2 w-full overflow-y-auto">
+          <div className="mb-4 text-center">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -48,7 +49,10 @@ export default function ChatPage() {
             <h2 className="text-lg font-semibold text-foreground">¿En qué te ayudo hoy?</h2>
             <p className="text-sm text-muted-foreground mt-1">Pregunta sobre tu plan de libertad financiera 2032</p>
           </div>
-          <QuickPrompts onSelect={(p) => sendMessage(p)} />
+          <div className="w-full space-y-3 pb-2">
+            <GoalsPanel onPrompt={(p) => sendMessage(p)} />
+            <QuickPrompts onSelect={(p) => sendMessage(p)} />
+          </div>
         </div>
       ) : (
         <ChatWindow messages={messages} status={status} />
