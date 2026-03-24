@@ -5,7 +5,15 @@ import {
   MessageContent,
   MessageResponse,
 } from '@/components/ai-elements/message'
-import { Tool } from '@/components/ai-elements/tool'
+import { Tool, type AnyToolPart } from '@/components/ai-elements/tool'
+import { TabsContext } from './TabsContext'
+
+function isGetSheetData(part: AnyToolPart): boolean {
+  return (
+    part.type === 'tool-get_sheet_data' ||
+    (part.type === 'dynamic-tool' && (part as { type: string; toolName: string }).toolName === 'get_sheet_data')
+  )
+}
 
 interface Props {
   message: UIMessage
@@ -63,9 +71,13 @@ export default function MessageBubble({ message, isStreaming }: Props) {
         <div className="flex-1 min-w-0">
           {toolParts.length > 0 && (
             <div className="mb-2">
-              {toolParts.map((part) => (
-                <Tool key={part.toolCallId} part={part} />
-              ))}
+              {toolParts.map((part) =>
+                isGetSheetData(part as AnyToolPart) ? (
+                  <TabsContext key={part.toolCallId} part={part as AnyToolPart} className="mb-2" />
+                ) : (
+                  <Tool key={part.toolCallId} part={part} />
+                )
+              )}
             </div>
           )}
           <MessageContent

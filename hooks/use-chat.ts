@@ -7,6 +7,11 @@ import type { UIMessage } from 'ai'
 import { toast } from 'sonner'
 import { useModelPreference } from './use-model-preference'
 
+function estimateTokens(messages: UIMessage[]): number {
+  if (messages.length === 0) return 0
+  return Math.ceil(JSON.stringify(messages).length / 3.5)
+}
+
 const STORAGE_KEY = 'cashflowai_messages'
 const MAX_MESSAGES = 50
 
@@ -29,7 +34,7 @@ const storedMessages = loadFromStorage()
 
 export function useChat() {
   const [input, setInput] = useState('')
-  const { provider, model } = useModelPreference()
+  const { provider, model, selected } = useModelPreference()
 
   const transport = useMemo(
     () =>
@@ -71,5 +76,9 @@ export function useChat() {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { messages, input, setInput, sendMessage: send, status, stop, clear }
+  const contextPct = selected.contextWindow > 0
+    ? Math.min(100, Math.round((estimateTokens(messages) / selected.contextWindow) * 100))
+    : 0
+
+  return { messages, input, setInput, sendMessage: send, status, stop, clear, contextPct }
 }
