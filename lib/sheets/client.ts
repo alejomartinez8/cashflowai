@@ -66,8 +66,10 @@ async function getTab(tab: string, refresh = false): Promise<string[][]> {
   const cached = tabDataCache.get(tab)
 
   if (!refresh && cached && now - cached.ts < CACHE_TTL_MS) {
+    if (process.env.NODE_ENV !== 'production') console.debug(`[sheets] cache hit: ${tab}`)
     return cached.data
   }
+  if (process.env.NODE_ENV !== 'production') console.debug(`[sheets] cache miss: ${tab}`)
 
   const sheets = await getSheetsClient()
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID!
@@ -82,11 +84,16 @@ async function getTab(tab: string, refresh = false): Promise<string[][]> {
     tabDataCache.set(tab, { data, ts: now })
     return data
   } catch (err: unknown) {
-    const isNotFound =
-      typeof err === 'object' &&
-      err !== null &&
-      'code' in err &&
-      (err as { code: number }).code === 400
+    const errCode =
+      typeof err === 'object' && err !== null && 'code' in err
+        ? (err as { code: number }).code
+        : null
+
+    if (errCode === 401) {
+      throw new Error('AUTH_REQUIRED')
+    }
+
+    const isNotFound = errCode === 400
 
     if (isNotFound) {
       const available = await listTabs()

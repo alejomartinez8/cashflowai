@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Component, type ReactNode, useState } from 'react'
 import { isToolUIPart, type UIMessage } from 'ai'
 import ChartMessage from './ChartMessage'
 import {
@@ -11,11 +11,28 @@ import {
 import { Tool, type AnyToolPart } from '@/components/ai-elements/tool'
 import { TabsContext } from './TabsContext'
 import { cn } from '@/lib/utils'
+import { TOOL_NAMES } from '@/lib/constants'
+import { toast } from 'sonner'
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+  static getDerivedStateFromError() { return { hasError: true } }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          Error al renderizar este mensaje.
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function isGetSheetData(part: AnyToolPart): boolean {
   return (
-    part.type === 'tool-get_sheet_data' ||
-    (part.type === 'dynamic-tool' && (part as { type: string; toolName: string }).toolName === 'get_sheet_data')
+    part.type === `tool-${TOOL_NAMES.GET_SHEET_DATA}` ||
+    (part.type === 'dynamic-tool' && (part as { type: string; toolName: string }).toolName === TOOL_NAMES.GET_SHEET_DATA)
   )
 }
 
@@ -32,10 +49,10 @@ function extractText(message: UIMessage): string {
 }
 
 function splitContent(text: string): { prose: string; chartSpec: string | null } {
-  const match = text.match(/```chart\n([\s\S]*?)```/)
+  const match = text.match(/```chart\r?\n([\s\S]*?)\r?\n```/)
   if (!match) return { prose: text, chartSpec: null }
   return {
-    prose: text.replace(/```chart\n[\s\S]*?```/, '').trim(),
+    prose: text.replace(/```chart\r?\n[\s\S]*?\r?\n```/, '').trim(),
     chartSpec: match[1].trim(),
   }
 }
@@ -44,9 +61,13 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('No se pudo copiar al portapapeles.')
+    }
   }
 
   return (
@@ -109,33 +130,35 @@ export default function MessageBubble({ message, isStreaming }: Props) {
     <Message from="assistant">
       <div className="flex gap-3 items-start">
         <BotIcon />
-        <div className="flex-1 min-w-0">
-          {toolParts.length > 0 && (
-            <div className="mb-2">
-              {toolParts.map((part) =>
-                isGetSheetData(part as AnyToolPart) ? (
-                  <TabsContext key={part.toolCallId} part={part as AnyToolPart} className="mb-2" />
-                ) : (
-                  <Tool key={part.toolCallId} part={part} />
-                )
-              )}
-            </div>
-          )}
-          {prose && (
-            <MessageContent
-              className="rounded-2xl rounded-tl-sm px-4 py-3 border border-border w-full max-w-full"
-              style={{ background: 'var(--card)', color: 'var(--card-foreground)', boxShadow: 'var(--shadow)' }}
-            >
-              <MessageResponse isAnimating={isStreaming}>{prose}</MessageResponse>
-            </MessageContent>
-          )}
-          {chartSpec && <ChartMessage spec={chartSpec} />}
-          {!isStreaming && prose && (
-            <div className="mt-1 ml-1">
-              <CopyButton text={prose} />
-            </div>
-          )}
-        </div>
+        <ErrorBoundary>
+          <div className="flex-1 min-w-0">
+            {toolParts.length > 0 && (
+              <div className="mb-2">
+                {toolParts.map((part) =>
+                  isGetSheetData(part as AnyToolPart) ? (
+                    <TabsContext key={part.toolCallId} part={part as AnyToolPart} className="mb-2" />
+                  ) : (
+                    <Tool key={part.toolCallId} part={part} />
+                  )
+                )}
+              </div>
+            )}
+            {prose && (
+              <MessageContent
+                className="rounded-2xl rounded-tl-sm px-4 py-3 border border-border w-full max-w-full"
+                style={{ background: 'var(--card)', color: 'var(--card-foreground)', boxShadow: 'var(--shadow)' }}
+              >
+                <MessageResponse isAnimating={isStreaming}>{prose}</MessageResponse>
+              </MessageContent>
+            )}
+            {chartSpec && <ChartMessage spec={chartSpec} />}
+            {!isStreaming && prose && (
+              <div className="mt-1 ml-1">
+                <CopyButton text={prose} />
+              </div>
+            )}
+          </div>
+        </ErrorBoundary>
       </div>
     </Message>
   )

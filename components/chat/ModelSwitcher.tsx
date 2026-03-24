@@ -1,27 +1,24 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { MODELS, useModelPreference } from '@/hooks/use-model-preference'
 
-export function ModelSwitcher() {
+interface Props {
+  availableProviders: string[]
+}
+
+export function ModelSwitcher({ availableProviders }: Props) {
   const { selected, setModel } = useModelPreference()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+  const visibleModels = MODELS.filter((m) => availableProviders.includes(m.provider))
 
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        onBlur={(e) => { if (!ref.current?.contains(e.relatedTarget as Node)) setOpen(false) }}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-muted/50 hover:bg-muted text-xs text-muted-foreground hover:text-foreground transition-colors"
         aria-label="Cambiar modelo de IA"
       >
@@ -39,7 +36,12 @@ export function ModelSwitcher() {
           <p className="px-3 pt-2.5 pb-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Modelo activo
           </p>
-          {MODELS.map((option) => {
+          {visibleModels.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">
+              No hay API keys configuradas.
+            </p>
+          )}
+          {visibleModels.map((option) => {
             const isActive = option.provider === selected.provider && option.model === selected.model
             return (
               <button

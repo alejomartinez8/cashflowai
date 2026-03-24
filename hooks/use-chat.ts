@@ -6,35 +6,32 @@ import { useEffect, useMemo, useState } from 'react'
 import type { UIMessage } from 'ai'
 import { toast } from 'sonner'
 import { useModelPreference } from './use-model-preference'
+import { STORAGE_KEYS } from '@/lib/constants'
 
 function estimateTokens(messages: UIMessage[]): number {
   if (messages.length === 0) return 0
-  return Math.ceil(JSON.stringify(messages).length / 3.5)
+  const text = messages
+    .flatMap((m) => m.parts.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text))
+    .join(' ')
+  return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.3)
 }
 
-const STORAGE_KEY = 'cashflowai_messages'
 const MAX_MESSAGES = 50
 
-function loadFromStorage(): UIMessage[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveToStorage(messages: UIMessage[]) {
-  const trimmed = messages.slice(-MAX_MESSAGES)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
-}
-
-const storedMessages = loadFromStorage()
-
-export function useChat() {
+export function useChat({ userId }: { userId: string }) {
+  const storageKey = STORAGE_KEYS.MESSAGES(userId)
   const [input, setInput] = useState('')
   const { provider, model, selected } = useModelPreference()
+
+  const [initialMessages] = useState<UIMessage[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = localStorage.getItem(storageKey)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  })
 
   const transport = useMemo(
     () =>
@@ -50,7 +47,7 @@ export function useChat() {
 
   const { messages, sendMessage, status, stop, setMessages } = useAiChat({
     transport,
-    messages: storedMessages,
+    messages: initialMessages,
     onError(error) {
       const msg = error?.message ?? ''
 
@@ -78,9 +75,10 @@ export function useChat() {
 
   useEffect(() => {
     if (messages.length > 0) {
-      saveToStorage(messages)
+      const trimmed = messages.slice(-MAX_MESSAGES)
+      localStorage.setItem(storageKey, JSON.stringify(trimmed))
     }
-  }, [messages])
+  }, [messages, storageKey])
 
   function send(text: string) {
     sendMessage({ text })
@@ -88,7 +86,7 @@ export function useChat() {
 
   function clear() {
     setMessages([])
-    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(storageKey)
   }
 
   const contextPct = selected.contextWindow > 0
