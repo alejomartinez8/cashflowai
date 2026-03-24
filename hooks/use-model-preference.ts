@@ -9,52 +9,41 @@ export interface ModelOption {
   contextWindow: number
 }
 
+export const MODELS: ModelOption[] = [
+  { provider: 'anthropic', model: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6', contextWindow: 200_000 },
+  { provider: 'anthropic', model: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5',  contextWindow: 200_000 },
+  { provider: 'openai',    model: 'gpt-4o',                    label: 'GPT-4o',             contextWindow: 128_000 },
+  { provider: 'openai',    model: 'gpt-4o-mini',               label: 'GPT-4o mini',        contextWindow: 128_000 },
+  { provider: 'google',    model: 'gemini-2.0-flash',          label: 'Gemini 2.0 Flash',   contextWindow: 1_048_576 },
+]
+
 const STORAGE_KEY = 'cashflowai_model'
+const DEFAULT = MODELS[0]
 
-export function useAvailableModels() {
-  const [models, setModels] = useState<ModelOption[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/ai/providers')
-      .then((r) => r.json())
-      .then((data: ModelOption[]) => {
-        setModels(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
-
-  return { models, loading }
+function readFromStorage(): ModelOption {
+  if (typeof window === 'undefined') return DEFAULT
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return DEFAULT
+    const saved = JSON.parse(raw) as ModelOption
+    const found = MODELS.find((m) => m.provider === saved.provider && m.model === saved.model)
+    return found ?? DEFAULT
+  } catch {
+    return DEFAULT
+  }
 }
 
-export function useModelPreference(models: ModelOption[]) {
-  const [selected, setSelected] = useState<ModelOption | null>(null)
+export function useModelPreference() {
+  const [selected, setSelected] = useState<ModelOption>(DEFAULT)
 
   useEffect(() => {
-    if (!models.length) return
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const saved = JSON.parse(raw) as ModelOption
-        const found = models.find(
-          (m) => m.provider === saved.provider && m.model === saved.model,
-        )
-        if (found) {
-          setSelected(found)
-          return
-        }
-      }
-    } catch {
-      // ignore
-    }
-    setSelected(models[0])
-  }, [models])
+    setSelected(readFromStorage())
+  }, [])
 
   const setModel = useCallback((option: ModelOption) => {
     setSelected(option)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(option))
   }, [])
 
-  return { selected: selected ?? models[0] ?? null, setModel }
+  return { provider: selected.provider, model: selected.model, selected, setModel }
 }
