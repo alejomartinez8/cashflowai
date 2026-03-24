@@ -5,17 +5,6 @@ const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 
 const providerCache = new Map<string, { models: ModelOption[]; ts: number }>()
 
-// Fallback context windows for OpenAI (their API doesn't return this field)
-const OPENAI_CONTEXT_WINDOWS: Record<string, number> = {
-  'gpt-4o': 128_000,
-  'gpt-4o-mini': 128_000,
-  'gpt-4-turbo': 128_000,
-  'o1': 200_000,
-  'o1-mini': 128_000,
-  'o3': 200_000,
-  'o3-mini': 200_000,
-  'o4-mini': 200_000,
-}
 
 async function fetchAnthropicModels(): Promise<ModelOption[]> {
   const key = process.env.ANTHROPIC_API_KEY
@@ -65,7 +54,7 @@ async function fetchOpenAIModels(): Promise<ModelOption[]> {
         provider: 'openai',
         model: m.id,
         label: m.id,
-        contextWindow: OPENAI_CONTEXT_WINDOWS[m.id] ?? 128_000,
+        contextWindow: 0, // OpenAI API doesn't return context window info
       }))
     providerCache.set('openai', { models, ts: Date.now() })
     return models
