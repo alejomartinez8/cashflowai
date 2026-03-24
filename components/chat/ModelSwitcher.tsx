@@ -3,9 +3,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { MODELS, useModelPreference } from '@/hooks/use-model-preference'
 
+type ValidateResult = {
+  ok: boolean
+  provider: string
+  model: string
+  response?: string
+  error?: string
+}
+
 export function ModelSwitcher() {
   const { selected, setModel } = useModelPreference()
   const [open, setOpen] = useState(false)
+  const [validating, setValidating] = useState(false)
+  const [validateResult, setValidateResult] = useState<ValidateResult | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -17,6 +27,20 @@ export function ModelSwitcher() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  async function handleValidate() {
+    setValidating(true)
+    setValidateResult(null)
+    try {
+      const res = await fetch('/api/ai/validate')
+      const data: ValidateResult = await res.json()
+      setValidateResult(data)
+    } catch {
+      setValidateResult({ ok: false, provider: '', model: '', error: 'Error de red' })
+    } finally {
+      setValidating(false)
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -56,7 +80,34 @@ export function ModelSwitcher() {
               </button>
             )
           })}
-          <div className="h-1.5" />
+          <div className="border-t border-border mx-2 my-1" />
+          <div className="px-2 pb-2">
+            <button
+              onClick={handleValidate}
+              disabled={validating}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium bg-muted hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              {validating ? 'Validando...' : 'Validar API key y modelo'}
+            </button>
+            {validateResult && (
+              <div className={`mt-1.5 rounded-lg px-2.5 py-2 text-[10px] leading-relaxed ${validateResult.ok ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'}`}>
+                {validateResult.ok ? (
+                  <>
+                    <div className="font-semibold mb-0.5">API key OK</div>
+                    <div>Proveedor: <span className="font-medium">{validateResult.provider}</span></div>
+                    <div>Modelo: <span className="font-medium">{validateResult.model}</span></div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-semibold mb-0.5">Error</div>
+                    {validateResult.provider && <div>Proveedor: {validateResult.provider}</div>}
+                    {validateResult.model && <div>Modelo: {validateResult.model}</div>}
+                    <div className="break-words">{validateResult.error}</div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
