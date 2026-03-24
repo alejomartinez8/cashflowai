@@ -1,10 +1,11 @@
-import type { UIMessage } from 'ai'
+import { isToolUIPart, type UIMessage } from 'ai'
 import ChartMessage from './ChartMessage'
 import {
   Message,
   MessageContent,
   MessageResponse,
 } from '@/components/ai-elements/message'
+import { Tool } from '@/components/ai-elements/tool'
 
 interface Props {
   message: UIMessage
@@ -53,12 +54,20 @@ export default function MessageBubble({ message, isStreaming }: Props) {
   }
 
   const { prose, chartSpec } = splitContent(text)
+  const toolParts = message.parts.filter(isToolUIPart)
 
   return (
     <Message from="assistant">
       <div className="flex gap-3 items-start">
         <BotIcon />
         <div className="flex-1 min-w-0">
+          {toolParts.length > 0 && (
+            <div className="mb-2">
+              {toolParts.map((part) => (
+                <Tool key={part.toolCallId} part={part} />
+              ))}
+            </div>
+          )}
           <MessageContent
             className="rounded-2xl rounded-tl-sm px-4 py-3 border border-border w-full max-w-full"
             style={{ background: 'var(--card)', color: 'var(--card-foreground)', boxShadow: 'var(--shadow)' }}
