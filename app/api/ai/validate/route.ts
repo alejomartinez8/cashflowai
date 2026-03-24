@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const result = await generateText({
       model: getModel(provider, model),
       prompt: 'Reply with only the word "ok".',
-      maxTokens: 5,
+      maxOutputTokens: 5,
     })
 
     return Response.json({
