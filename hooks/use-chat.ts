@@ -5,7 +5,7 @@ import { DefaultChatTransport } from 'ai'
 import { useEffect, useMemo, useState } from 'react'
 import type { UIMessage } from 'ai'
 import { toast } from 'sonner'
-import { useModelPreference } from './use-model-preference'
+import { useAvailableModels, useModelPreference } from './use-model-preference'
 
 function estimateTokens(messages: UIMessage[]): number {
   if (messages.length === 0) return 0
@@ -34,18 +34,20 @@ const storedMessages = loadFromStorage()
 
 export function useChat() {
   const [input, setInput] = useState('')
-  const { provider, model, selected } = useModelPreference()
+  const { models } = useAvailableModels()
+  const { selected } = useModelPreference(models)
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/ai/chat',
         headers: {
-          'x-ai-provider': provider,
-          'x-ai-model': model,
+          'x-ai-provider': selected?.provider ?? '',
+          'x-ai-model': selected?.model ?? '',
         },
       }),
-    [provider, model],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selected?.provider, selected?.model],
   )
 
   const { messages, sendMessage, status, stop, setMessages } = useAiChat({
@@ -76,7 +78,7 @@ export function useChat() {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  const contextPct = selected.contextWindow > 0
+  const contextPct = selected && selected.contextWindow > 0
     ? Math.min(100, Math.round((estimateTokens(messages) / selected.contextWindow) * 100))
     : 0
 

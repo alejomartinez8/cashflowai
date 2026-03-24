@@ -2,16 +2,17 @@ import { generateText } from 'ai'
 import { auth } from '@/auth'
 import { getModel } from '@/lib/ai/providers'
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session) return new Response('Unauthorized', { status: 401 })
 
-  const provider = process.env.AI_PROVIDER || 'anthropic'
-  const model = process.env.AI_MODEL || 'claude-sonnet-4-5'
+  const { searchParams } = new URL(req.url)
+  const provider = searchParams.get('provider') ?? 'anthropic'
+  const model = searchParams.get('model') ?? 'claude-sonnet-4-6'
 
   try {
     const result = await generateText({
-      model: getModel(),
+      model: getModel(provider, model),
       prompt: 'Reply with only the word "ok".',
       maxTokens: 5,
     })
