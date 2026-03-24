@@ -55,10 +55,25 @@ export function useChat() {
     messages: storedMessages,
     onError(error) {
       const msg = error?.message ?? ''
-      if (msg.includes('quota') || msg.includes('429')) {
-        toast.error('Se agotó la cuota de Google Sheets. Intenta en unos minutos.')
+
+      let serverError: { error?: string; code?: string } = {}
+      try { serverError = JSON.parse(msg) } catch { /* no es JSON */ }
+
+      const code = serverError.code ?? ''
+      const detail = serverError.error ?? ''
+
+      if (code === 'AUTH_REQUIRED' || msg.includes('401') || msg.toLowerCase().includes('unauthorized')) {
+        toast.error('Sesión expirada. Recarga la página e inicia sesión.')
+      } else if (code === 'RATE_LIMIT' || msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate limit')) {
+        toast.error('Límite de uso alcanzado. Intenta en unos minutos.')
+      } else if (code === 'INVALID_API_KEY') {
+        toast.error('API key inválida. Revisa la configuración del modelo.')
+      } else if (code === 'MODEL_NOT_FOUND') {
+        toast.error('Modelo no disponible. Cambia el modelo en la barra superior.')
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch failed')) {
+        toast.error('Sin conexión. Verifica tu red e intenta de nuevo.')
       } else {
-        toast.error('Ocurrió un error al procesar tu solicitud.')
+        toast.error(detail || 'Ocurrió un error al procesar tu solicitud.')
       }
     },
   })

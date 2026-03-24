@@ -92,9 +92,9 @@ async function getTab(tab: string, refresh = false): Promise<string[][]> {
       const available = await listTabs()
       const similar = findSimilarTabs(tab, available)
       const suggestion =
-        similar.length > 0 ? ` Did you mean: ${similar.map((t) => `'${t}'`).join(', ')}?` : ''
+        similar.length > 0 ? ` ¿Quisiste decir: ${similar.map((t) => `'${t}'`).join(', ')}?` : ''
       throw new Error(
-        `Tab '${tab}' not found. Available tabs: ${JSON.stringify(available)}.${suggestion}`,
+        `Pestaña '${tab}' no encontrada. Disponibles: ${JSON.stringify(available)}.${suggestion}`,
       )
     }
     throw err
