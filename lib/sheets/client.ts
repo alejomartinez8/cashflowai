@@ -18,10 +18,6 @@ export function clearCache(tab?: string) {
 async function getSheetsClient() {
   const session = await auth()
 
-  if (session?.error === 'RefreshAccessTokenError') {
-    throw new Error('AUTH_REFRESH_FAILED')
-  }
-
   if (!session?.accessToken) {
     throw new Error('AUTH_REQUIRED')
   }
