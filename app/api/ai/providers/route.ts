@@ -5,15 +5,8 @@ const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 
 const providerCache = new Map<string, { models: ModelOption[]; ts: number }>()
 
-const CONTEXT_WINDOWS: Record<string, number> = {
-  // Anthropic
-  'claude-opus-4-6': 200_000,
-  'claude-sonnet-4-6': 200_000,
-  'claude-haiku-4-5-20251001': 200_000,
-  'claude-3-5-sonnet-20241022': 200_000,
-  'claude-3-5-haiku-20241022': 200_000,
-  'claude-3-opus-20240229': 200_000,
-  // OpenAI
+// Fallback context windows for OpenAI (their API doesn't return this field)
+const OPENAI_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-4o': 128_000,
   'gpt-4o-mini': 128_000,
   'gpt-4-turbo': 128_000,
@@ -22,23 +15,6 @@ const CONTEXT_WINDOWS: Record<string, number> = {
   'o3': 200_000,
   'o3-mini': 200_000,
   'o4-mini': 200_000,
-  // Google
-  'gemini-2.0-flash': 1_048_576,
-  'gemini-2.0-flash-lite': 1_048_576,
-  'gemini-1.5-pro': 2_097_152,
-  'gemini-1.5-flash': 1_048_576,
-  'gemini-2.5-pro': 1_048_576,
-  'gemini-2.5-flash': 1_048_576,
-}
-
-const DEFAULT_CTX: Record<string, number> = {
-  anthropic: 200_000,
-  openai: 128_000,
-  google: 1_048_576,
-}
-
-function ctxFor(provider: string, id: string): number {
-  return CONTEXT_WINDOWS[id] ?? DEFAULT_CTX[provider] ?? 128_000
 }
 
 async function fetchAnthropicModels(): Promise<ModelOption[]> {
@@ -53,12 +29,14 @@ async function fetchAnthropicModels(): Promise<ModelOption[]> {
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     })
     if (!res.ok) return []
-    const { data } = (await res.json()) as { data: { id: string; display_name: string }[] }
+    const { data } = (await res.json()) as {
+      data: { id: string; display_name: string; context_window: number }[]
+    }
     const models: ModelOption[] = (data ?? []).map((m) => ({
       provider: 'anthropic',
       model: m.id,
       label: m.display_name ?? m.id,
-      contextWindow: ctxFor('anthropic', m.id),
+      contextWindow: m.context_window ?? 200_000,
     }))
     providerCache.set('anthropic', { models, ts: Date.now() })
     return models
@@ -87,7 +65,7 @@ async function fetchOpenAIModels(): Promise<ModelOption[]> {
         provider: 'openai',
         model: m.id,
         label: m.id,
-        contextWindow: ctxFor('openai', m.id),
+        contextWindow: OPENAI_CONTEXT_WINDOWS[m.id] ?? 128_000,
       }))
     providerCache.set('openai', { models, ts: Date.now() })
     return models
@@ -109,7 +87,12 @@ async function fetchGoogleModels(): Promise<ModelOption[]> {
     )
     if (!res.ok) return []
     const { models: raw } = (await res.json()) as {
-      models: { name: string; displayName: string; supportedGenerationMethods: string[] }[]
+      models: {
+        name: string
+        displayName: string
+        supportedGenerationMethods: string[]
+        inputTokenLimit: number
+      }[]
     }
     const models: ModelOption[] = (raw ?? [])
       .filter(
@@ -123,7 +106,7 @@ async function fetchGoogleModels(): Promise<ModelOption[]> {
           provider: 'google',
           model: id,
           label: m.displayName ?? id,
-          contextWindow: ctxFor('google', id),
+          contextWindow: m.inputTokenLimit ?? 1_048_576,
         }
       })
     providerCache.set('google', { models, ts: Date.now() })
