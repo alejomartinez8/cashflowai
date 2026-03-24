@@ -4,9 +4,10 @@ import { useEffect, useRef } from 'react'
 import { useChat } from '@/hooks/use-chat'
 import ChatWindow from '@/components/chat/ChatWindow'
 import QuickPrompts from '@/components/chat/QuickPrompts'
+import { cn } from '@/lib/utils'
 
 export default function ChatPage() {
-  const { messages, input, setInput, sendMessage, status, stop, clear } = useChat()
+  const { messages, input, setInput, sendMessage, status, stop, clear, contextPct } = useChat()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isStreaming = status === 'submitted' || status === 'streaming'
 
@@ -99,14 +100,31 @@ export default function ChatPage() {
 
           <div className="flex justify-between items-center px-1">
             <p className="text-xs text-muted-foreground/60">Enter para enviar · Shift+Enter para nueva línea</p>
-            {messages.length > 0 && (
-              <button
-                onClick={clear}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Limpiar conversación
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {contextPct > 0 && (
+                <span
+                  className={cn(
+                    'text-xs font-mono',
+                    contextPct >= 80
+                      ? 'text-red-500'
+                      : contextPct >= 50
+                        ? 'text-yellow-500'
+                        : 'text-muted-foreground/60',
+                  )}
+                  title="Estimated context window usage"
+                >
+                  ctx {contextPct}%
+                </span>
+              )}
+              {messages.length > 0 && (
+                <button
+                  onClick={clear}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Limpiar conversación
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

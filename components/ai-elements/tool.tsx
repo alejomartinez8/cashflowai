@@ -15,7 +15,7 @@ import { isValidElement, useState } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type AnyToolPart = ToolUIPart<UITools> | DynamicToolUIPart;
+export type AnyToolPart = ToolUIPart<UITools> | DynamicToolUIPart;
 
 type ToolState = AnyToolPart["state"];
 
