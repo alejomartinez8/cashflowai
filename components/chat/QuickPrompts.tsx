@@ -5,7 +5,7 @@ const FALLBACK_PROMPTS: Suggestion[] = [
   { icon: '📈', text: 'Muéstrame la evolución del ingreso pasivo' },
   { icon: '💸', text: 'Grafica gastos fijos vs variables por mes' },
   { icon: '🏦', text: 'Muéstrame el estado de mis deudas' },
-  { icon: '🔍', text: 'Compara mis ingresos de 2023, 2024 y 2025' },
+  { icon: '🔍', text: '¿Cuál es la tendencia de mis ingresos?' },
   { icon: '🎯', text: '¿Estoy en camino a mis metas financieras?' },
 ]
 
