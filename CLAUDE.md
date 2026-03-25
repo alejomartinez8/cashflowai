@@ -40,12 +40,7 @@ Available providers are detected server-side in `app/chat/layout.tsx` by checkin
 
 ### Sheets loading strategy
 
-`lib/sheets/client.ts` loads tabs on demand. Per-tab 5-minute in-memory cache (simple `Map` + timestamp, no external library). Known tabs: `2025`, `2024`, `2023`, `Proyecciones`, `Balance`, `Deudas Banco`, `Prestamos`. Never parse sheet data manually — the AI interprets raw 2D arrays.
-
-Sheet layout notes:
-- Column A is usually empty; data starts at B
-- Values are plain integers in COP (e.g. `5290000` = $5,290,000 COP)
-- Annual tabs share a similar layout: row 4 = month headers, row 7 = income, row 8 = expenses, row 15 = passive income
+`lib/sheets/client.ts` loads tabs on demand. Per-tab 5-minute in-memory cache (simple `Map` + timestamp, no external library). Tabs are discovered dynamically via `list_available_tabs` — never hardcode tab names. The AI interprets raw 2D arrays; never assume sheet structure.
 
 ### AI chat route
 
