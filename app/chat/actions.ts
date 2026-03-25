@@ -6,9 +6,6 @@ import { loadTabs } from '@/lib/sheets/client'
 import { getModel } from '@/lib/ai/providers'
 import type { Suggestion } from '@/lib/types'
 
-const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
-let cache: { data: Suggestion[]; ts: number } | null = null
-
 const FALLBACK_SUGGESTIONS: Suggestion[] = [
   { icon: '📊', text: '¿Cómo voy vs el plan este año?' },
   { icon: '📈', text: 'Muéstrame la evolución del ingreso pasivo' },
@@ -18,17 +15,36 @@ const FALLBACK_SUGGESTIONS: Suggestion[] = [
   { icon: '🎯', text: '¿Estoy en camino a mis metas financieras?' },
 ]
 
+const ANGLES = [
+  'patrimonio neto',
+  'liquidez y flujo de caja',
+  'deudas y pasivos',
+  'ingreso pasivo',
+  'proyecciones y metas',
+  'riesgo financiero',
+  'comparación histórica',
+  'activos específicos',
+]
+
 function buildSuggestionsPrompt(balanceRaw: string): string {
+  const picked = [...ANGLES].sort(() => Math.random() - 0.5).slice(0, 3)
   return `You are generating contextual question suggestions for CashflowAI, a personal finance AI for a Colombian user. Below is their "Balance" tab data (raw 2D array from Google Sheets API).
 
 BALANCE DATA:
 ${balanceRaw}
 
-Generate exactly 6 short questions in Colombian Spanish (using "vos") that this user would find most insightful RIGHT NOW. Be specific to their actual data (reference real numbers or named items when useful). Cover a variety of angles: trends, goals, risks, comparisons, projections.
-Each question must be ≤ 80 characters and start with a single relevant emoji.
+Generate exactly 6 short questions in professional, expert Colombian Spanish (use "usted" or neutral formal register — NOT "vos"). Each question must feel fresh and varied — no generic templates. Scan the Balance data carefully: reference specific named assets, liabilities, goals, or notes the user has added. Be precise with numbers when useful.
+
+This session must emphasize these angles (rotate them so every session feels different): ${picked.join(', ')}.
+
+Rules:
+- Each question ≤ 80 characters
+- Start with a single relevant emoji
+- Vary question types: analysis, projection, risk, comparison, action
+- Sound like a seasoned financial advisor probing the user's situation
 
 Return ONLY a valid JSON array, no other text:
-[{"icon": "📊", "text": "¿Cómo va tu patrimonio neto este año?"}, ...]`
+[{"icon": "📊", "text": "¿Cómo evoluciona su patrimonio neto en 2025?"}, ...]`
 }
 
 function parseSuggestions(text: string): Suggestion[] {
@@ -61,8 +77,6 @@ export async function getSuggestions(): Promise<Suggestion[]> {
   const session = await auth()
   if (!session?.accessToken) return FALLBACK_SUGGESTIONS
 
-  if (cache && Date.now() - cache.ts < CACHE_TTL_MS) return cache.data
-
   try {
     const tabData = await loadTabs(['Balance'])
     const balanceRaw = JSON.stringify(tabData['Balance'])
@@ -72,9 +86,7 @@ export async function getSuggestions(): Promise<Suggestion[]> {
       prompt: buildSuggestionsPrompt(balanceRaw),
     })
 
-    const suggestions = parseSuggestions(text)
-    cache = { data: suggestions, ts: Date.now() }
-    return suggestions
+    return parseSuggestions(text)
   } catch {
     return FALLBACK_SUGGESTIONS
   }
