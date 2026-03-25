@@ -13,6 +13,7 @@ interface Props {
   messages: UIMessage[]
   status: string
   branchStore?: BranchStore
+  onEdit?: (messageId: string, newText: string) => void
 }
 
 const TypingIndicator = () => (
@@ -35,7 +36,7 @@ const TypingIndicator = () => (
   </div>
 )
 
-export default function ChatWindow({ messages, status, branchStore }: Props) {
+export default function ChatWindow({ messages, status, branchStore, onEdit }: Props) {
   const isLoading = status === 'submitted' || status === 'streaming'
 
   // Index of the last assistant message in the array
@@ -50,6 +51,7 @@ export default function ChatWindow({ messages, status, branchStore }: Props) {
             message={msg}
             isStreaming={isLoading && idx === messages.length - 1}
             branchStore={msg.role === 'assistant' && idx === lastAssistantIdx && !isLoading ? branchStore : undefined}
+            onEdit={!isLoading ? onEdit : undefined}
           />
         ))}
         {isLoading && <TypingIndicator />}

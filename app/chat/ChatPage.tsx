@@ -46,6 +46,15 @@ export default function ChatPage({ userId }: { userId: string }) {
     clear()
   }
 
+  function handleEditMessage(messageId: string, newText: string) {
+    const idx = messages.findIndex((m) => m.id === messageId)
+    if (idx === -1) return
+    // Truncate everything from this message onwards, then re-send
+    setMessages(messages.slice(0, idx))
+    branchStore.clearBranches()
+    sendMessage(newText)
+  }
+
   const isEmpty = messages.length === 0
 
   return (
@@ -64,7 +73,7 @@ export default function ChatPage({ userId }: { userId: string }) {
           </div>
         </div>
       ) : (
-        <ChatWindow messages={messages} status={status} branchStore={branchStore} />
+        <ChatWindow messages={messages} status={status} branchStore={branchStore} onEdit={handleEditMessage} />
       )}
 
       {/* Bottom input area */}
