@@ -85,7 +85,35 @@ export function useChat({ userId }: { userId: string }) {
     }
   }, [messages, storageKey])
 
+  // Ref so the branch store always reads the latest messages without stale closures
+  const messagesRef = useRef(messages)
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
   function send(text: string) {
+    sendMessage({ text })
+  }
+
+  // `reload` is not available in @ai-sdk/react v3 — simulate it by truncating
+  // to before the last user+assistant turn and re-submitting the user message.
+  function reload() {
+    const msgs = messagesRef.current
+    // Find the last user message
+    let lastUserIdx = -1
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') { lastUserIdx = i; break }
+    }
+    if (lastUserIdx === -1) return
+
+    const lastUserMsg = msgs[lastUserIdx]
+    const text = lastUserMsg.parts
+      .filter((p) => p.type === 'text')
+      .map((p) => (p as { type: 'text'; text: string }).text)
+      .join('')
+
+    if (!text) return
+
+    // Remove the user message and everything after, then re-submit
+    setMessages(msgs.slice(0, lastUserIdx))
     sendMessage({ text })
   }
 
@@ -98,5 +126,5 @@ export function useChat({ userId }: { userId: string }) {
     ? Math.min(100, Math.round((estimateTokens(messages) / selected.contextWindow) * 100))
     : 0
 
-  return { messages, input, setInput, sendMessage: send, status, stop, clear, contextPct }
+  return { messages, input, setInput, sendMessage: send, status, stop, clear, contextPct, reload, setMessages }
 }

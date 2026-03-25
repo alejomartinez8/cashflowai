@@ -1,19 +1,28 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useChat } from '@/hooks/use-chat'
 import ChatWindow from '@/components/chat/ChatWindow'
 import QuickPrompts from '@/components/chat/QuickPrompts'
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputTextarea,
+  PromptInputSubmit,
+  PromptInputFooter,
+} from '@/components/ai-elements/prompt-input'
 import { cn } from '@/lib/utils'
 import { getSuggestions } from './actions'
 import type { Suggestion } from '@/lib/types'
+import { useBranchStore } from '@/hooks/use-branch-store'
 
 export default function ChatPage({ userId }: { userId: string }) {
-  const { messages, input, setInput, sendMessage, status, stop, clear, contextPct } = useChat({ userId })
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { messages, input, setInput, sendMessage, status, stop, clear, contextPct, reload, setMessages } = useChat({ userId })
   const isStreaming = status === 'submitted' || status === 'streaming'
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null)
   const [suggestionsLoading, setSuggestionsLoading] = useState(true)
+
+  const branchStore = useBranchStore({ messages, status, reload, setMessages })
 
   useEffect(() => {
     let cancelled = false
@@ -24,25 +33,26 @@ export default function ChatPage({ userId }: { userId: string }) {
     return () => { cancelled = true }
   }, [])
 
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
-  }, [input])
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
-
   function handleSend() {
     const text = input.trim()
     if (!text || isStreaming) return
+    branchStore.clearBranches()
     sendMessage(text)
     setInput('')
+  }
+
+  function handleClear() {
+    branchStore.clearBranches()
+    clear()
+  }
+
+  function handleEditMessage(messageId: string, newText: string) {
+    const idx = messages.findIndex((m) => m.id === messageId)
+    if (idx === -1) return
+    // Truncate everything from this message onwards, then re-send
+    setMessages(messages.slice(0, idx))
+    branchStore.clearBranches()
+    sendMessage(newText)
   }
 
   const isEmpty = messages.length === 0
@@ -63,55 +73,40 @@ export default function ChatPage({ userId }: { userId: string }) {
           </div>
         </div>
       ) : (
-        <ChatWindow messages={messages} status={status} />
+        <ChatWindow messages={messages} status={status} branchStore={branchStore} onEdit={handleEditMessage} />
       )}
 
       {/* Bottom input area */}
       <div className="border-t border-border bg-card px-4 pt-2 pb-3">
-        <div className="max-w-3xl mx-auto space-y-2">
-          {/* Compact suggestions — always visible */}
-          <QuickPrompts compact onSelect={(p) => sendMessage(p)} suggestions={suggestions} isLoading={suggestionsLoading} />
+        <PromptInput
+          onSubmit={handleSend}
+          status={status}
+          onStop={stop}
+          className="max-w-3xl mx-auto"
+        >
+          {/* Compact suggestions — always visible above the input */}
+          <QuickPrompts
+            compact
+            onSelect={(p) => sendMessage(p)}
+            suggestions={suggestions}
+            isLoading={suggestionsLoading}
+          />
 
           {/* Input row */}
-          <div
-            className="flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-2.5 transition-shadow focus-within:border-primary/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.12)]"
-            style={{ boxShadow: 'var(--shadow-md)' }}
-          >
-            <textarea
-              ref={textareaRef}
+          <PromptInputBody>
+            <PromptInputTextarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
               placeholder="Pregunta sobre tus finanzas..."
-              rows={1}
-              className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none overflow-y-auto leading-5 self-center"
             />
-            {isStreaming ? (
-              <button
-                onClick={stop}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="4" y="4" width="16" height="16" rx="2"/>
-                </svg>
-                Detener
-              </button>
-            ) : (
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 hover:opacity-90 transition-all active:scale-95 shadow-sm"
-                aria-label="Enviar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
-                </svg>
-              </button>
-            )}
-          </div>
+            <PromptInputSubmit disabled={!input.trim()} />
+          </PromptInputBody>
 
-          <div className="flex justify-between items-center px-1">
-            <p className="text-xs text-muted-foreground/60">Enter para enviar · Shift+Enter para nueva línea</p>
+          {/* Footer: hint text + context % + clear */}
+          <PromptInputFooter>
+            <p className="text-xs text-muted-foreground/60">
+              Enter para enviar · Shift+Enter para nueva línea
+            </p>
             <div className="flex items-center gap-3">
               {contextPct > 0 && (
                 <span
@@ -130,15 +125,16 @@ export default function ChatPage({ userId }: { userId: string }) {
               )}
               {messages.length > 0 && (
                 <button
-                  onClick={clear}
+                  type="button"
+                  onClick={handleClear}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Limpiar conversación
                 </button>
               )}
             </div>
-          </div>
-        </div>
+          </PromptInputFooter>
+        </PromptInput>
       </div>
     </div>
   )

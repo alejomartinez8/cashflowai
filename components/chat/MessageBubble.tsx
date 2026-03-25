@@ -1,6 +1,6 @@
 'use client'
 
-import { Component, type ReactNode, useState } from 'react'
+import { Component, type ReactNode, useRef, useState } from 'react'
 import { isToolUIPart, type UIMessage } from 'ai'
 import ChartMessage from './ChartMessage'
 import {
@@ -9,10 +9,12 @@ import {
   MessageResponse,
 } from '@/components/ai-elements/message'
 import { Tool, type AnyToolPart } from '@/components/ai-elements/tool'
+import { BranchNav } from '@/components/ai-elements/branch'
 import { TabsContext } from './TabsContext'
 import { cn } from '@/lib/utils'
 import { TOOL_NAMES } from '@/lib/constants'
 import { toast } from 'sonner'
+import type { BranchStore } from '@/hooks/use-branch-store'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false }
@@ -39,6 +41,8 @@ function isGetSheetData(part: AnyToolPart): boolean {
 interface Props {
   message: UIMessage
   isStreaming?: boolean
+  branchStore?: BranchStore
+  onEdit?: (messageId: string, newText: string) => void
 }
 
 function extractText(message: UIMessage): string {
@@ -82,6 +86,7 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       title={copied ? 'Copiado' : 'Copiar'}
       className={cn(
@@ -110,27 +115,123 @@ const BotIcon = () => (
   </div>
 )
 
-export default function MessageBubble({ message, isStreaming }: Props) {
+// ── User message with inline edit mode ─────────────────────────────────────
+
+function UserMessage({ message, text, onEdit }: { message: UIMessage; text: string; onEdit?: (id: string, t: string) => void }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editText, setEditText] = useState(text)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function startEdit() {
+    setEditText(text)
+    setIsEditing(true)
+    // Focus textarea after state update
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  function cancelEdit() {
+    setIsEditing(false)
+    setEditText(text)
+  }
+
+  function submitEdit() {
+    const trimmed = editText.trim()
+    if (!trimmed || trimmed === text) {
+      setIsEditing(false)
+      return
+    }
+    onEdit?.(message.id, trimmed)
+    setIsEditing(false)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      submitEdit()
+    }
+    if (e.key === 'Escape') {
+      cancelEdit()
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <Message from="user">
+        <div className="flex flex-col gap-2 w-full">
+          <textarea
+            ref={textareaRef}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={3}
+            className={cn(
+              'w-full resize-none rounded-2xl border border-primary/50 bg-background px-4 py-2.5 text-sm',
+              'text-foreground placeholder:text-muted-foreground focus:outline-none',
+              'focus:shadow-[0_0_0_3px_rgba(37,99,235,0.12)] leading-relaxed',
+            )}
+            style={{ boxShadow: 'var(--shadow-md)' }}
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={submitEdit}
+              disabled={!editText.trim()}
+              className="px-3 py-1.5 text-xs rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-all"
+            >
+              Regenerar
+            </button>
+          </div>
+        </div>
+      </Message>
+    )
+  }
+
+  return (
+    <Message from="user">
+      <div className="flex flex-col items-end gap-1">
+        <MessageContent
+          className="text-primary-foreground"
+          style={{ background: 'var(--primary)' }}
+        >
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{text}</p>
+        </MessageContent>
+        {/* Action row — matches assistant's pattern */}
+        <div className="flex items-center gap-1 mr-1">
+          <CopyButton text={text} />
+          {onEdit && (
+            <button
+              type="button"
+              onClick={startEdit}
+              title="Editar mensaje"
+              className="flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            >
+              {/* Pencil icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    </Message>
+  )
+}
+
+// ── Main component ──────────────────────────────────────────────────────────
+
+export default function MessageBubble({ message, isStreaming, branchStore, onEdit }: Props) {
   const isUser = message.role === 'user'
   const text = extractText(message)
 
   if (isUser) {
-    return (
-      <Message from="user">
-        <div className="group flex items-start gap-1.5 justify-end">
-          <CopyButton
-            text={text}
-            className="opacity-0 group-hover:opacity-100 mt-1.5"
-          />
-          <MessageContent
-            className="text-primary-foreground"
-            style={{ background: 'var(--primary)' }}
-          >
-            <p className="whitespace-pre-wrap break-words leading-relaxed">{text}</p>
-          </MessageContent>
-        </div>
-      </Message>
-    )
+    return <UserMessage message={message} text={text} onEdit={onEdit} />
   }
 
   const { prose, chartSpec } = splitContent(text, isStreaming)
@@ -163,8 +264,11 @@ export default function MessageBubble({ message, isStreaming }: Props) {
             )}
             {chartSpec && <ChartMessage spec={chartSpec} />}
             {!isStreaming && prose && (
-              <div className="mt-1 ml-1">
+              <div className="mt-1 ml-1 flex items-center gap-2">
                 <CopyButton text={prose} />
+                {branchStore && (
+                  <BranchNav branchStore={branchStore} isStreaming={isStreaming} />
+                )}
               </div>
             )}
           </div>
