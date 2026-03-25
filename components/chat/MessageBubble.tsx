@@ -48,13 +48,23 @@ function extractText(message: UIMessage): string {
     .join('')
 }
 
-function splitContent(text: string): { prose: string; chartSpec: string | null } {
-  const match = text.match(/```chart\r?\n([\s\S]*?)\r?\n```/)
-  if (!match) return { prose: text, chartSpec: null }
-  return {
-    prose: text.replace(/```chart\r?\n[\s\S]*?\r?\n```/, '').trim(),
-    chartSpec: match[1].trim(),
+function splitContent(text: string, isStreaming = false): { prose: string; chartSpec: string | null } {
+  const completeMatch = text.match(/```chart\r?\n([\s\S]*?)\r?\n```/)
+  if (completeMatch) {
+    return {
+      prose: text.replace(/```chart\r?\n[\s\S]*?\r?\n```/, '').trim(),
+      chartSpec: completeMatch[1].trim(),
+    }
   }
+  // During streaming, strip partial chart blocks so prose only grows forward —
+  // never shrinks — avoiding animation cursor misalignment in Streamdown.
+  if (isStreaming) {
+    const partialIdx = text.indexOf('```chart')
+    if (partialIdx !== -1) {
+      return { prose: text.slice(0, partialIdx).trim(), chartSpec: null }
+    }
+  }
+  return { prose: text, chartSpec: null }
 }
 
 function CopyButton({ text, className }: { text: string; className?: string }) {
@@ -123,7 +133,7 @@ export default function MessageBubble({ message, isStreaming }: Props) {
     )
   }
 
-  const { prose, chartSpec } = splitContent(text)
+  const { prose, chartSpec } = splitContent(text, isStreaming)
   const toolParts = message.parts.filter(isToolUIPart)
 
   return (
