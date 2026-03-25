@@ -40,7 +40,7 @@ Available providers are detected server-side in `app/chat/layout.tsx` by checkin
 
 ### Sheets loading strategy
 
-`lib/sheets/client.ts` loads tabs on demand. Per-tab 5-minute in-memory cache (simple `Map` + timestamp, no external library). Known tabs: `2025`, `2024`, `2023`, `Proyecciones`, `Balance`, `Casa San Cristobal`, `Deudas Banco`, `Prestamos`. Never parse sheet data manually — the AI interprets raw 2D arrays.
+`lib/sheets/client.ts` loads tabs on demand. Per-tab 5-minute in-memory cache (simple `Map` + timestamp, no external library). Known tabs: `2025`, `2024`, `2023`, `Proyecciones`, `Balance`, `Deudas Banco`, `Prestamos`. Never parse sheet data manually — the AI interprets raw 2D arrays.
 
 Sheet layout notes:
 - Column A is usually empty; data starts at B

@@ -21,7 +21,7 @@ An AI-powered personal financial assistant. Chat in natural language with an AI 
 ## Getting started
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 # fill in the required values (see below)
 
 yarn install
@@ -39,11 +39,11 @@ Open [http://localhost:3000](http://localhost:3000).
 | `GOOGLE_SHEETS_ID` | ID of the Google Sheet to use |
 | `ALLOWED_EMAIL` | Only this email address can log in |
 | `AUTH_SECRET` | NextAuth secret — generate with `npx auth secret` |
-| `AI_PROVIDER` | `anthropic` (default), `openai`, or `google` |
-| `AI_MODEL` | Model name — default `claude-sonnet-4-5` |
-| `ANTHROPIC_API_KEY` | Required if `AI_PROVIDER=anthropic` |
-| `OPENAI_API_KEY` | Required if `AI_PROVIDER=openai` |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Required if `AI_PROVIDER=google` |
+| `ANTHROPIC_API_KEY` | Required to use Anthropic models |
+| `OPENAI_API_KEY` | Required to use OpenAI models |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Required to use Google models |
+
+Model and provider are selected at runtime via the URL search param `?model=provider:model-id` (e.g. `?model=anthropic:claude-sonnet-4-6`). Available providers are automatically detected based on which API keys are set.
 
 ## Commands
 
