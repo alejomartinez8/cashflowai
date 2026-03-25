@@ -2,7 +2,7 @@
 
 import { useChat as useAiChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { UIMessage } from 'ai'
 import { toast } from 'sonner'
 import { useModelPreference } from './use-model-preference'
@@ -33,16 +33,21 @@ export function useChat({ userId }: { userId: string }) {
     }
   })
 
+  const modelRef = useRef({ provider, model })
+  useEffect(() => {
+    modelRef.current = { provider, model }
+  }, [provider, model])
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/ai/chat',
-        headers: {
-          'x-ai-provider': provider,
-          'x-ai-model': model,
-        },
+        headers: () => ({
+          'x-ai-provider': modelRef.current.provider,
+          'x-ai-model': modelRef.current.model,
+        }),
       }),
-    [provider, model],
+    [],
   )
 
   const { messages, sendMessage, status, stop, setMessages } = useAiChat({

@@ -17,7 +17,7 @@ export const MODELS: ModelOption[] = [
   { provider: 'anthropic', model: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5',  contextWindow: 200_000 },
   { provider: 'openai',    model: 'gpt-4o',                    label: 'GPT-4o',             contextWindow: 128_000 },
   { provider: 'openai',    model: 'gpt-4o-mini',               label: 'GPT-4o mini',        contextWindow: 128_000 },
-  { provider: 'google',    model: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite', contextWindow: 1_048_576 },
+  { provider: 'google',    model: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', contextWindow: 1_048_576 },
 ]
 
 const DEFAULT = MODELS[0]
