@@ -1,23 +1,27 @@
-# CashflowAI — Roadmap de Mejoras de Arquitectura
+# CashflowAI — Architecture Roadmap
 
-Documento de referencia para mejoras identificadas en el análisis de arquitectura.
-Ordenado por prioridad. Hacer de a una a la vez.
+Reference document for architectural improvements identified during deep review.
+Ordered by priority. Tackle one at a time.
+
+*Last updated: 2025-03-25*
 
 ---
 
-## P0 — Crítico (rompe funcionalidad en producción)
+## P0 — Critical (breaks production functionality)
 
-### P0-A: Token refresh de Google OAuth
-**Problema:** Los access tokens de Google expiran en ~1 hora. Sin refresh automático,
-el usuario tiene que re-loguearse cada hora y todas las llamadas a Sheets fallan con `AUTH_REQUIRED`.
+### P0-A: Google OAuth token refresh
+- [ ] **Implement auto-refresh for expired Google access tokens**
 
-**Archivos a modificar:** `auth.ts`, `lib/sheets/client.ts`
+**Problem:** Google access tokens expire after ~1 hour. Without automatic refresh,
+the user must re-login every hour and all Sheets calls fail with `AUTH_REQUIRED`.
 
-**Solución:**
-- En el `jwt` callback de `auth.ts`, guardar también `refresh_token` y `expires_at`
-- Antes de retornar el token, verificar si expiró
-- Si expiró, hacer POST a `https://oauth2.googleapis.com/token` con `grant_type: refresh_token`
-- Actualizar `accessToken` y `expiresAt` en el JWT
+**Files:** `auth.ts`, `lib/sheets/client.ts`
+
+**Solution:**
+- Store `refresh_token` and `expires_at` in the JWT callback alongside `access_token`
+- Before returning the token, check if it has expired
+- If expired, POST to `https://oauth2.googleapis.com/token` with `grant_type: refresh_token`
+- Update `accessToken` and `expiresAt` in the JWT
 
 ```typescript
 // auth.ts — jwt callback
@@ -37,82 +41,88 @@ if (Date.now() > token.expiresAt) {
 }
 ```
 
-**Esfuerzo estimado:** 2h
+**Effort:** ~2h
 
 ---
 
 ### P0-B: Context window management
-**Problema:** El request al LLM envía TODO el historial sin truncar. Los tool results
-con datos de sheets son enormes. Con conversaciones largas se excede el context window,
-se pagan tokens innecesarios y se degrada la calidad de las respuestas.
+- [ ] **Compact old tool results and implement sliding window**
 
-**Archivos a modificar:** `app/api/ai/chat/route.ts`
+**Problem:** The LLM request sends the entire message history without truncation.
+Tool results containing sheet data are large. Long conversations exceed the context
+window, waste tokens, and degrade response quality.
 
-**Solución:**
-- Mantener siempre: system prompt + últimos N mensajes (sliding window)
-- Compactar tool results viejos: después de que el AI ya respondió, el raw data no es necesario
-- Reemplazar tool results de más de 2 turnos atrás con `[Datos ya procesados]`
+**Files:** `app/api/ai/chat/route.ts`
+
+**Solution:**
+- Always keep: system prompt + last N messages (sliding window)
+- Compact old tool results: after the AI has already responded, raw data is no longer needed
+- Replace tool results older than 2 turns with `[Sheet data already processed]`
 
 ```typescript
 function compactOldToolResults(messages: Message[]): Message[] {
-  const cutoff = messages.length - 6 // mantener últimos 3 turnos completos
+  const cutoff = messages.length - 6 // keep last 3 full turns
   return messages.map((msg, i) => {
     if (i < cutoff && msg.role === 'tool') {
-      return { ...msg, content: '[Datos de hoja ya procesados]' }
+      return { ...msg, content: '[Sheet data already processed]' }
     }
     return msg
   })
 }
 ```
 
-**Esfuerzo estimado:** 4h
+**Effort:** ~4h
 
 ---
 
-## P1 — Alta prioridad (mejoras significativas de calidad y DX)
+## P1 — High priority (significant quality and DX improvements)
 
-### P1-A: Charts como tool dedicado (no fence blocks)
-**Problema:** El parsing de ` ```chart ``` ` en el frontend es frágil. Un JSON malformado
-rompe el parse, y durante streaming puede cortar el JSON a la mitad. Solución más elegante
-y alineada con cómo funciona el Vercel AI SDK.
+### P1-A: Charts as a dedicated tool (replace fence blocks)
+- [ ] **Add `render_chart` tool instead of parsing ` ```chart ``` ` fence blocks**
 
-**Archivos a modificar:** `app/api/ai/chat/route.ts`, `lib/ai/prompts.ts`,
+**Problem:** Parsing ` ```chart ``` ` in the frontend is fragile. A malformed JSON
+breaks the parse, and during streaming the JSON can be cut in half. A tool-based
+approach is more elegant and aligned with how Vercel AI SDK works.
+
+**Files:** `app/api/ai/chat/route.ts`, `lib/ai/prompts.ts`,
 `components/chat/MessageBubble.tsx`, `hooks/use-chat.ts`
 
-**Solución:**
-- Agregar tool `render_chart` al route handler
-- El AI llama a este tool con el spec Vega-Lite como objeto estructurado (no string)
-- El frontend detecta tool calls de tipo `render_chart` y renderiza `<ChartMessage>`
-- Eliminar la lógica de split por fence block
+**Solution:**
+- Add `render_chart` tool to the route handler
+- The AI calls this tool with the Vega-Lite spec as a structured object (not a string)
+- The frontend detects `render_chart` tool calls and renders `<ChartMessage>`
+- Remove fence-block splitting logic
 
 ```typescript
-// En route.ts
+// route.ts
 render_chart: tool({
-  description: 'Renderizar un gráfico Vega-Lite con los datos analizados',
+  description: 'Render a Vega-Lite chart with the analyzed data',
   parameters: z.object({
-    spec: z.record(z.unknown()).describe('Vega-Lite v5 spec con datos inline'),
+    spec: z.record(z.unknown()).describe('Vega-Lite v5 spec with inline data'),
     title: z.string().optional(),
   }),
-  execute: async ({ spec }) => ({ spec }), // pass-through, el frontend renderiza
+  execute: async ({ spec }) => ({ spec }), // pass-through, frontend renders
 })
 ```
 
-**Ventajas adicionales:**
-- El spec viene estructurado (no hay que parsear strings)
-- El AI SDK maneja el streaming nativamente
-- No hay false positives si el AI menciona "chart" en otro contexto
+**Benefits:**
+- Spec comes structured (no string parsing needed)
+- AI SDK handles streaming natively
+- No false positives if the AI mentions "chart" in another context
 
-**Esfuerzo estimado:** 3h
+**Effort:** ~3h
 
 ---
 
-### P1-B: Observabilidad — logging de uso del AI
-**Problema:** No hay visibilidad de qué tools llama el AI, cuántos tokens consume cada
-request, ni qué errores ocurren en producción. Sin esto es imposible mejorar el agente.
+### P1-B: Observability — AI usage logging
+- [ ] **Add structured logging for token usage, tool calls, and latency**
 
-**Archivos a modificar:** `app/api/ai/chat/route.ts`
+**Problem:** No visibility into which tools the AI calls, how many tokens each request
+consumes, or what errors occur in production. Without this, iterative improvement is impossible.
 
-**Solución mínima (console.log estructurado):**
+**Files:** `app/api/ai/chat/route.ts`
+
+**Minimal solution (structured console.log):**
 
 ```typescript
 const result = streamText({
@@ -132,24 +142,26 @@ const result = streamText({
 })
 ```
 
-**Solución avanzada:** Integrar Langfuse (open source, free tier) para trazabilidad
-completa de cada step del agente.
+**Advanced solution:** Integrate Langfuse (open source, free tier) for full per-step traceability.
 
-**Esfuerzo estimado:** 2h (básico) / 4h (Langfuse)
+**Effort:** ~2h (basic) / ~4h (Langfuse)
 
 ---
 
-### P1-C: Inyectar tabs en system prompt (evitar re-descubrir en cada turno)
-**Problema:** El system prompt le dice al AI que llame `list_available_tabs()` en cada
-turno. Pero los tabs casi nunca cambian. Es un tool call innecesario que añade latencia.
+### P1-C: Inject available tabs into system prompt
+- [ ] **Pre-load tabs server-side to avoid redundant `list_available_tabs()` calls**
 
-**Archivos a modificar:** `app/api/ai/chat/route.ts`, `lib/ai/prompts.ts`
+**Problem:** The system prompt instructs the AI to call `list_available_tabs()` on every
+turn, but tabs rarely change during a conversation. This wastes a tool call + LLM
+round-trip per message (~30% of latency).
 
-**Solución:**
-- En el route handler, llamar `listTabs()` antes de `streamText()`
-- Pasar la lista de tabs a `buildSystemPrompt({ availableTabs })`
-- El AI recibe los tabs como contexto y va directo a `get_sheet_data`
-- Mantener `list_available_tabs` como tool de fallback (por si el AI necesita re-descubrir)
+**Files:** `app/api/ai/chat/route.ts`, `lib/ai/prompts.ts`
+
+**Solution:**
+- In the route handler, call `listTabs()` before `streamText()`
+- Pass the tab list to `buildSystemPrompt({ availableTabs })`
+- The AI receives tabs as context and goes straight to `get_sheet_data`
+- Keep `list_available_tabs` as a fallback tool (in case AI needs to re-discover)
 
 ```typescript
 // route.ts
@@ -157,38 +169,39 @@ const availableTabs = await listTabs(accessToken)
 const systemPrompt = buildSystemPrompt({ availableTabs })
 ```
 
-**Esfuerzo estimado:** 1h
+**Effort:** ~1h
 
 ---
 
-### P1-D: Refactor — mover lógica de API routes a `/lib/actions`
-**Problema:** La lógica de negocio está mezclada dentro de los route handlers.
-Dificulta el testing, reutilización, y la migración futura a Server Actions.
-También es preparación necesaria para agregar persistencia con Neon DB.
+### P1-D: Refactor — extract business logic to `lib/actions/`
+- [ ] **Create `lib/actions/` to decouple business logic from route handlers**
 
-**Estado actual:**
-- `app/api/ai/chat/route.ts` — lógica de chat mezclada con HTTP handling
-- `app/api/sheets/route.ts` — lógica de sheets mezclada con HTTP handling
-- `app/chat/actions.ts` — ya usa Server Actions (bien)
+**Problem:** Business logic is mixed inside route handlers, making it hard to test,
+reuse, and migrate to Server Actions. This is also preparation for adding Neon DB persistence.
 
-**Propuesta de estructura:**
+**Current state:**
+- `app/api/ai/chat/route.ts` — chat logic mixed with HTTP handling
+- `app/api/sheets/route.ts` — sheets logic mixed with HTTP handling
+- `app/chat/actions.ts` — already uses Server Actions (good)
+
+**Proposed structure:**
 
 ```
 lib/
   actions/
-    chat.ts        # lógica de chat: buildChatPayload, validateChatRequest
-    sheets.ts      # lógica de sheets: fetchSheetData, formatForAI
+    chat.ts        # chat logic: buildChatPayload, validateChatRequest
+    sheets.ts      # sheets logic: fetchSheetData, formatForAI
     db/
-      messages.ts  # CRUD de mensajes en Neon (preparación para persistencia)
-      users.ts     # gestión de usuarios (preparación para multi-user)
+      messages.ts  # message CRUD for Neon (persistence preparation)
+      users.ts     # user management (multi-user preparation)
 ```
 
-**Reglas:**
-- `lib/actions/` contiene lógica pura (no HTTP, no headers, no Response objects)
-- Los route handlers y Server Actions son solo glue code que llaman a estas funciones
-- Las funciones en `lib/actions/db/` son las que van a interactuar con Neon
+**Rules:**
+- `lib/actions/` contains pure logic (no HTTP, no headers, no Response objects)
+- Route handlers and Server Actions become thin glue code calling these functions
+- `lib/actions/db/` functions will interact with Neon
 
-**Ejemplo de migración:**
+**Migration example:**
 
 ```typescript
 // lib/actions/chat.ts
@@ -200,34 +213,36 @@ export async function processChat(params: {
 }) {
   const availableTabs = await listTabs(params.accessToken)
   const systemPrompt = buildSystemPrompt({ availableTabs })
-  // ... lógica de streamText
+  // ... streamText logic
 }
 
-// app/api/ai/chat/route.ts (queda thin)
+// app/api/ai/chat/route.ts (becomes thin)
 export async function POST(req: Request) {
   const session = await auth()
-  // validación...
+  // validation...
   return processChat({ messages, provider, model, accessToken: session.accessToken })
 }
 ```
 
-**Esfuerzo estimado:** 4h
+**Effort:** ~4h
 
 ---
 
-## P2 — Media prioridad (mejoras importantes para producción)
+## P2 — Medium priority (important for production readiness)
 
-### P2-A: Persistencia de mensajes con Neon DB
-**Problema:** El historial de conversaciones solo vive en localStorage. Si el usuario
-limpia el browser, pierde todo. No hay posibilidad de acceder desde otro dispositivo.
+### P2-A: Message persistence with Neon DB
+- [ ] **Add PostgreSQL persistence for conversations and messages**
 
-**Prerequisito:** P1-D (lib/actions/db/ debe existir primero)
+**Requires:** P1-D (`lib/actions/db/` must exist first)
 
-**Stack propuesto:**
-- Neon (PostgreSQL serverless, free tier generoso)
-- Drizzle ORM (TypeScript-first, muy liviano, bien integrado con Next.js)
+**Problem:** Conversation history lives only in localStorage. Clearing the browser
+loses everything. No cross-device access.
 
-**Schema inicial:**
+**Proposed stack:**
+- Neon (serverless PostgreSQL, generous free tier)
+- Drizzle ORM (TypeScript-first, lightweight, well-integrated with Next.js)
+
+**Initial schema:**
 
 ```sql
 -- conversations
@@ -241,46 +256,50 @@ id              uuid primary key default gen_random_uuid()
 conversation_id uuid references conversations(id) on delete cascade
 role            text not null  -- 'user' | 'assistant'
 content         text not null
-tool_calls      jsonb          -- tool calls del AI
-metadata        jsonb          -- tokens usados, modelo, duración
+tool_calls      jsonb          -- AI tool calls
+metadata        jsonb          -- tokens used, model, duration
 created_at      timestamp default now()
 ```
 
-**Archivos nuevos:**
+**New files:**
 - `lib/db/schema.ts` — Drizzle schema
-- `lib/db/index.ts` — conexión a Neon
+- `lib/db/index.ts` — Neon connection
 - `lib/actions/db/messages.ts` — `saveMessage()`, `getMessages()`, `clearConversation()`
 
-**Variables de entorno a agregar:**
+**New env var:**
 ```
 DATABASE_URL=postgres://...@neon.tech/cashflowai
 ```
 
-**Esfuerzo estimado:** 6h
+**Effort:** ~6h
 
 ---
 
-### P2-B: Memory entre sesiones (user profile)
-**Problema:** El AI no recuerda metas, preferencias ni contexto personal entre sesiones.
-Para un coach financiero, esto es crítico.
+### P2-B: Cross-session memory (user profile)
+- [ ] **Persist user goals and preferences so the AI remembers across sessions**
 
-**Prerequisito:** P2-A (necesita DB para persistir)
+**Requires:** P2-A (needs DB for persistence)
 
-**Solución:**
-- Tabla `user_profiles` en Neon con campos: goals, context_notes, preferences
-- Un tool `update_user_context` que el AI puede llamar cuando detecta info relevante
-- Inyectar el perfil en el system prompt en cada conversación
+**Problem:** The AI doesn't remember goals, preferences, or personal context between
+sessions. For a financial coach, memory is critical.
 
-**Esfuerzo estimado:** 4h (después de tener P2-A)
+**Solution:**
+- `user_profiles` table in Neon with fields: goals, context_notes, preferences
+- `update_user_context` tool the AI can call when it detects relevant info
+- Inject profile into system prompt on every conversation
+
+**Effort:** ~4h (after P2-A is done)
 
 ---
 
 ### P2-C: Rate limiting
-**Problema:** No hay protección contra uso excesivo que queme las API keys.
+- [ ] **Add request rate limiting to protect API keys**
 
-**Archivos a modificar:** `app/api/ai/chat/route.ts`
+**Problem:** No protection against excessive usage that burns through API keys.
 
-**Solución mínima (in-memory, suficiente para single-user):**
+**Files:** `app/api/ai/chat/route.ts`
+
+**Minimal solution (in-memory, sufficient for single-user):**
 
 ```typescript
 const rateLimiter = new Map<string, { count: number; resetAt: number }>()
@@ -298,70 +317,72 @@ function checkRateLimit(email: string, limit = 20): boolean {
 }
 ```
 
-**Esfuerzo estimado:** 1h
+**Effort:** ~1h
 
 ---
 
-### P2-D: Validación de chart specs antes de renderizar
-**Problema:** El spec Vega-Lite del AI se pasa directamente a vega-embed sin validar.
-Un spec malformado puede causar errores de renderizado silenciosos o inesperados.
+### P2-D: Validate chart specs before rendering
+- [ ] **Add Zod validation for Vega-Lite specs before passing to vega-embed**
 
-**Archivos a modificar:** `components/chat/ChartMessage.tsx`
+**Problem:** The AI-generated Vega-Lite spec is passed directly to vega-embed without
+validation. Malformed specs can cause silent rendering errors.
 
-**Solución:**
-- Validar con Zod que el spec tiene al menos `$schema`, `mark`, `encoding`
-- Si no es válido, mostrar el error descriptivo en lugar del chart vacío
+**Files:** `components/chat/ChartMessage.tsx`
 
-**Esfuerzo estimado:** 2h
+**Solution:**
+- Validate with Zod that the spec has at least `$schema`, `mark`, `encoding`
+- If invalid, show a descriptive error instead of a blank chart
 
----
-
-## P3 — Baja prioridad (optimizaciones y escalabilidad futura)
-
-### P3-A: Cache persistente con Upstash Redis
-**Problema:** El cache in-memory de sheets no sobrevive en entornos serverless (Vercel)
-porque cada request puede ir a una instancia diferente.
-
-**Solución:**
-- Reemplazar el `Map` con `unstable_cache` de Next.js (solución simple, built-in)
-- O usar Upstash Redis (free tier) para cache distribuido real
-
-**Esfuerzo estimado:** 2h
+**Effort:** ~2h
 
 ---
 
-### P3-B: Tool routing / sub-agents para escalabilidad
-**Problema:** Hoy hay 3 tools. Cuando se agreguen features (presupuestos, metas, alertas),
-la lista crece y el AI se confunde sobre cuál usar.
+## P3 — Low priority (optimizations and future scalability)
 
-**Patrón propuesto:**
+### P3-A: Persistent cache with Upstash Redis
+- [ ] **Replace in-memory Map cache with serverless-safe alternative**
+
+**Problem:** The in-memory sheets cache doesn't survive in serverless environments (Vercel)
+because each request may hit a different instance.
+
+**Solution:**
+- Replace `Map` with Next.js `unstable_cache` (simple, built-in)
+- Or use Upstash Redis (free tier) for real distributed cache
+
+**Effort:** ~2h
+
+---
+
+### P3-B: Tool routing / sub-agents for scalability
+- [ ] **Design agent routing architecture for future capabilities**
+
+**Problem:** Currently there are 3 tools. As features grow (budgets, goals, alerts),
+the tool list expands and the AI gets confused about which to use.
+
+**Proposed pattern:**
 
 ```
 User Message
-    ↓
-Router Agent (decide capability)
-    ├── Sheet Analysis Agent (tools: get_data, list_tabs)
-    ├── Chart Agent (tool: render_chart)
-    ├── Goals Agent (tools: get_goals, set_goal)    [futuro]
-    └── Budget Agent (tools: get_budget, set_budget) [futuro]
+    |
+Router Agent (decides capability)
+    +-- Sheet Analysis Agent (tools: get_data, list_tabs)
+    +-- Chart Agent (tool: render_chart)
+    +-- Goals Agent (tools: get_goals, set_goal)    [future]
+    +-- Budget Agent (tools: get_budget, set_budget) [future]
 ```
 
-**Esfuerzo estimado:** 8h+ (diseño + implementación)
+**Effort:** ~8h+ (design + implementation)
 
 ---
 
-## Orden de ejecución sugerido
+## Suggested execution order
 
 ```
-P0-A → P0-B → P1-C → P1-A → P1-D → P1-B → P2-C → P2-A → P2-B → P2-D → P3-A → P3-B
+P0-A -> P0-B -> P1-C -> P1-A -> P1-D -> P1-B -> P2-C -> P2-A -> P2-B -> P2-D -> P3-A -> P3-B
 ```
 
-Lógica:
-1. Primero estabilizar lo que ya existe (P0)
-2. Mejorar la arquitectura del agente (P1)
-3. Agregar persistencia una vez que la arquitectura esté limpia (P2)
-4. Optimizaciones finales (P3)
-
----
-
-*Última actualización: 2026-03-25*
+**Rationale:**
+1. First stabilize what already exists (P0)
+2. Improve the agent architecture (P1)
+3. Add persistence once architecture is clean (P2)
+4. Final optimizations (P3)
