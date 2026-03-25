@@ -53,6 +53,10 @@ Uses Vercel AI SDK `streamText()` with the `get_sheet_data` tool and `stopWhen: 
 
 The AI always responds in Colombian Spanish. Charts are embedded as a fenced ` ```chart ``` ` JSON block at the end of the response. The frontend splits on this block to separate prose from the Vega-Lite spec.
 
+### Server Actions
+
+Prefer Server Actions over API routes for server-side logic. New server-side features should use `'use server'` functions in `app/*/actions.ts` files, not new `app/api/` routes. The exception is the existing streaming chat endpoint (`app/api/ai/chat/route.ts`) which must remain a Route Handler because Vercel AI SDK streaming (`toUIMessageStreamResponse`) is incompatible with Server Actions.
+
 ### UI components
 
 - `components/ui/` — shadcn/ui components. **Always install via MCP, never copy component code manually.**

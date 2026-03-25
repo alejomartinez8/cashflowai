@@ -1,15 +1,28 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useChat } from '@/hooks/use-chat'
 import ChatWindow from '@/components/chat/ChatWindow'
 import QuickPrompts from '@/components/chat/QuickPrompts'
 import { cn } from '@/lib/utils'
+import { getSuggestions } from './actions'
+import type { Suggestion } from '@/lib/types'
 
 export default function ChatPage({ userId }: { userId: string }) {
   const { messages, input, setInput, sendMessage, status, stop, clear, contextPct } = useChat({ userId })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isStreaming = status === 'submitted' || status === 'streaming'
+  const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null)
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    getSuggestions()
+      .then((data) => { if (!cancelled) setSuggestions(data) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setSuggestionsLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -45,8 +58,8 @@ export default function ChatPage({ userId }: { userId: string }) {
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-foreground">¿En qué te ayudo hoy?</h2>
-            <p className="text-sm text-muted-foreground mt-1">Pregunta sobre tus finanzas</p>
+            <h2 className="text-lg font-semibold text-foreground">¿En qué trabajamos hoy?</h2>
+            <p className="text-sm text-muted-foreground mt-1">Tu coach financiero personal</p>
           </div>
         </div>
       ) : (
@@ -57,7 +70,7 @@ export default function ChatPage({ userId }: { userId: string }) {
       <div className="border-t border-border bg-card px-4 pt-2 pb-3">
         <div className="max-w-3xl mx-auto space-y-2">
           {/* Compact suggestions — always visible */}
-          <QuickPrompts compact onSelect={(p) => sendMessage(p)} />
+          <QuickPrompts compact onSelect={(p) => sendMessage(p)} suggestions={suggestions} isLoading={suggestionsLoading} />
 
           {/* Input row */}
           <div
