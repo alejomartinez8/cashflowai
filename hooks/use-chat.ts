@@ -50,7 +50,7 @@ export function useChat({ userId }: { userId: string }) {
     [],
   )
 
-  const { messages, sendMessage, status, stop, setMessages } = useAiChat({
+  const { messages, sendMessage, status, stop, setMessages, reload } = useAiChat({
     transport,
     messages: initialMessages,
     onError(error) {
@@ -98,5 +98,5 @@ export function useChat({ userId }: { userId: string }) {
     ? Math.min(100, Math.round((estimateTokens(messages) / selected.contextWindow) * 100))
     : 0
 
-  return { messages, input, setInput, sendMessage: send, status, stop, clear, contextPct }
+  return { messages, input, setInput, sendMessage: send, status, stop, clear, contextPct, reload, setMessages }
 }

@@ -9,10 +9,12 @@ import {
   MessageResponse,
 } from '@/components/ai-elements/message'
 import { Tool, type AnyToolPart } from '@/components/ai-elements/tool'
+import { BranchNav } from '@/components/ai-elements/branch'
 import { TabsContext } from './TabsContext'
 import { cn } from '@/lib/utils'
 import { TOOL_NAMES } from '@/lib/constants'
 import { toast } from 'sonner'
+import type { BranchStore } from '@/hooks/use-branch-store'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false }
@@ -39,6 +41,7 @@ function isGetSheetData(part: AnyToolPart): boolean {
 interface Props {
   message: UIMessage
   isStreaming?: boolean
+  branchStore?: BranchStore
 }
 
 function extractText(message: UIMessage): string {
@@ -100,7 +103,7 @@ const BotIcon = () => (
   </div>
 )
 
-export default function MessageBubble({ message, isStreaming }: Props) {
+export default function MessageBubble({ message, isStreaming, branchStore }: Props) {
   const isUser = message.role === 'user'
   const text = extractText(message)
 
@@ -153,8 +156,11 @@ export default function MessageBubble({ message, isStreaming }: Props) {
             )}
             {chartSpec && <ChartMessage spec={chartSpec} />}
             {!isStreaming && prose && (
-              <div className="mt-1 ml-1">
+              <div className="mt-1 ml-1 flex items-center gap-2">
                 <CopyButton text={prose} />
+                {branchStore && (
+                  <BranchNav branchStore={branchStore} isStreaming={isStreaming} />
+                )}
               </div>
             )}
           </div>

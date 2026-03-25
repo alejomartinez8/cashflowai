@@ -7,10 +7,12 @@ import {
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
 import MessageBubble from './MessageBubble'
+import type { BranchStore } from '@/hooks/use-branch-store'
 
 interface Props {
   messages: UIMessage[]
   status: string
+  branchStore?: BranchStore
 }
 
 const TypingIndicator = () => (
@@ -33,8 +35,11 @@ const TypingIndicator = () => (
   </div>
 )
 
-export default function ChatWindow({ messages, status }: Props) {
+export default function ChatWindow({ messages, status, branchStore }: Props) {
   const isLoading = status === 'submitted' || status === 'streaming'
+
+  // Index of the last assistant message in the array
+  const lastAssistantIdx = messages.map(m => m.role).lastIndexOf('assistant')
 
   return (
     <Conversation className="flex-1">
@@ -44,6 +49,7 @@ export default function ChatWindow({ messages, status }: Props) {
             key={msg.id}
             message={msg}
             isStreaming={isLoading && idx === messages.length - 1}
+            branchStore={msg.role === 'assistant' && idx === lastAssistantIdx && !isLoading ? branchStore : undefined}
           />
         ))}
         {isLoading && <TypingIndicator />}
