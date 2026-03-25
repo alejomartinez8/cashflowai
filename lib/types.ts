@@ -1,3 +1,8 @@
+export interface Suggestion {
+  icon: string  // single emoji
+  text: string  // the prompt text, ≤ 80 characters
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
