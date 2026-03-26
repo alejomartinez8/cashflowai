@@ -37,7 +37,9 @@ const TypingIndicator = () => (
 )
 
 export default function ChatWindow({ messages, status, branchStore, onEdit }: Props) {
-  const isLoading = status === 'submitted' || status === 'streaming'
+  const isActive = status === 'submitted' || status === 'streaming'
+  // Show typing dots only while waiting for the first chunk, not during active streaming
+  const showTyping = status === 'submitted'
 
   // Index of the last assistant message in the array
   const lastAssistantIdx = messages.map(m => m.role).lastIndexOf('assistant')
@@ -49,12 +51,12 @@ export default function ChatWindow({ messages, status, branchStore, onEdit }: Pr
           <MessageBubble
             key={msg.id}
             message={msg}
-            isStreaming={isLoading && idx === messages.length - 1}
-            branchStore={msg.role === 'assistant' && idx === lastAssistantIdx && !isLoading ? branchStore : undefined}
-            onEdit={!isLoading ? onEdit : undefined}
+            isStreaming={isActive && idx === messages.length - 1}
+            branchStore={msg.role === 'assistant' && idx === lastAssistantIdx && !isActive ? branchStore : undefined}
+            onEdit={!isActive ? onEdit : undefined}
           />
         ))}
-        {isLoading && <TypingIndicator />}
+        {showTyping && <TypingIndicator />}
       </ConversationContent>
       <ConversationScrollButton />
     </Conversation>

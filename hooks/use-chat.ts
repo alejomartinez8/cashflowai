@@ -72,6 +72,9 @@ export function useChat({ userId }: { userId: string }) {
         toast.error('Modelo no disponible. Cambia el modelo en la barra superior.')
       } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch failed')) {
         toast.error('Sin conexión. Verifica tu red e intenta de nuevo.')
+      } else if (msg.includes('AbortError') || msg.includes('aborted') || msg.includes('The operation was aborted')) {
+        // Stream was interrupted (e.g., server timeout or network drop)
+        toast.error('La respuesta se interrumpió. Intenta de nuevo.')
       } else {
         toast.error(detail || 'Ocurrió un error al procesar tu solicitud.')
       }

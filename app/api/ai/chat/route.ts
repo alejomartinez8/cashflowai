@@ -6,6 +6,9 @@ import { buildSystemPrompt } from '@/lib/ai/prompts'
 import { loadTabs, listTabs } from '@/lib/sheets/client'
 import { TOOL_NAMES } from '@/lib/constants'
 
+// Allow up to 60s for streaming AI responses (prevents serverless timeout mid-stream)
+export const maxDuration = 60
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session) return new Response('Unauthorized', { status: 401 })
@@ -24,6 +27,7 @@ export async function POST(req: Request) {
       model: getModel(providerHeader, modelHeader),
       system: buildSystemPrompt(),
       messages,
+      abortSignal: req.signal,
       tools: {
         [TOOL_NAMES.GET_CURRENT_DATE]: tool({
           description:
