@@ -4,6 +4,4 @@ export const TOOL_NAMES = {
   LIST_AVAILABLE_TABS: 'list_available_tabs',
 } as const
 
-export const STORAGE_KEYS = {
-  MESSAGES: (userId: string) => `cashflowai_messages_${userId}`,
-} as const
+export const STORAGE_KEYS = {} as const

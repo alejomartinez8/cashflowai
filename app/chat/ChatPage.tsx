@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useChat } from '@/hooks/use-chat'
+import { useConversations } from '@/hooks/use-conversations'
 import ChatWindow from '@/components/chat/ChatWindow'
 import QuickPrompts from '@/components/chat/QuickPrompts'
+import ConversationSidebar from '@/components/chat/ConversationSidebar'
 import {
   PromptInput,
   PromptInputBody,
@@ -16,11 +18,38 @@ import { getSuggestions } from './actions'
 import type { Suggestion } from '@/lib/types'
 import { useBranchStore } from '@/hooks/use-branch-store'
 
-export default function ChatPage({ userId }: { userId: string }) {
-  const { messages, input, setInput, sendMessage, status, stop, clear, contextPct, reload, setMessages } = useChat({ userId })
+import type { ConversationSummary } from '@/hooks/use-conversations'
+
+interface ChatPageProps {
+  initialConversations: ConversationSummary[]
+}
+
+export default function ChatPage({ initialConversations }: ChatPageProps) {
+  const {
+    conversationList,
+    currentId,
+    refresh,
+    loadConversation,
+    startNew,
+    onConversationIdChange,
+  } = useConversations(initialConversations)
+
+  const onConversationSaved = useCallback(() => {
+    refresh()
+  }, [refresh])
+
+  const { messages, sendMessage, status, stop, clear, contextPct, reload, setMessages } = useChat({
+    conversationId: currentId,
+    initialMessages: [],
+    onConversationIdChange,
+    onConversationSaved,
+  })
+
   const isStreaming = status === 'submitted' || status === 'streaming'
+  const [input, setInput] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null)
   const [suggestionsLoading, setSuggestionsLoading] = useState(true)
+  const [loadingConversation, setLoadingConversation] = useState(false)
 
   const branchStore = useBranchStore({ messages, status, reload, setMessages })
 
@@ -33,6 +62,24 @@ export default function ChatPage({ userId }: { userId: string }) {
     return () => { cancelled = true }
   }, [])
 
+  // Select a conversation: load from DB and set messages directly (no effect needed)
+  const handleSelectConversation = useCallback(async (id: string) => {
+    if (id === currentId) return
+    setLoadingConversation(true)
+    try {
+      const conv = await loadConversation(id)
+      if (conv) {
+        onConversationIdChange(conv.id)
+        setMessages(conv.messages)
+        branchStore.clearBranches()
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingConversation(false)
+    }
+  }, [currentId, loadConversation, onConversationIdChange, setMessages, branchStore])
+
   function handleSend() {
     const text = input.trim()
     if (!text || isStreaming) return
@@ -44,21 +91,53 @@ export default function ChatPage({ userId }: { userId: string }) {
   function handleClear() {
     branchStore.clearBranches()
     clear()
+    startNew()
+    refresh()
   }
 
   function handleEditMessage(messageId: string, newText: string) {
     const idx = messages.findIndex((m) => m.id === messageId)
     if (idx === -1) return
-    // Truncate everything from this message onwards, then re-send
     setMessages(messages.slice(0, idx))
     branchStore.clearBranches()
     sendMessage(newText)
   }
 
+  function handleNewConversation() {
+    branchStore.clearBranches()
+    setMessages([])
+    startNew()
+  }
+
   const isEmpty = messages.length === 0
+
+  if (loadingConversation) {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden bg-background">
+        <ConversationSidebar
+          conversations={conversationList}
+          currentId={currentId}
+          onSelect={handleSelectConversation}
+          onNew={handleNewConversation}
+          onRefresh={refresh}
+        />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="animate-pulse text-muted-foreground text-sm">Cargando conversación...</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-background">
+      <ConversationSidebar
+        conversations={conversationList}
+        currentId={currentId}
+        onSelect={handleSelectConversation}
+        onNew={handleNewConversation}
+        onRefresh={refresh}
+      />
+
       {/* Main content area */}
       {isEmpty ? (
         <div className="flex flex-col flex-1 items-center justify-end pb-2 w-full overflow-y-auto">
