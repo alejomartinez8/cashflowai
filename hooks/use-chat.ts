@@ -2,11 +2,11 @@
 
 import { useChat as useAiChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UIMessage } from 'ai'
 import { toast } from 'sonner'
 import { useModelPreference } from './use-model-preference'
-import { STORAGE_KEYS } from '@/lib/constants'
+import { saveConversation } from '@/app/chat/conversation-actions'
 
 function estimateTokens(messages: UIMessage[]): number {
   if (messages.length === 0) return 0
@@ -16,38 +16,32 @@ function estimateTokens(messages: UIMessage[]): number {
   return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.3)
 }
 
-const MAX_MESSAGES = 50
+interface UseChatOptions {
+  conversationId: string | null
+  initialMessages: UIMessage[]
+  onConversationIdChange: (id: string) => void
+  onConversationSaved: () => void
+}
 
-export function useChat({ userId }: { userId: string }) {
-  const storageKey = STORAGE_KEYS.MESSAGES(userId)
-  const [input, setInput] = useState('')
+export function useChat({ conversationId, initialMessages, onConversationIdChange, onConversationSaved }: UseChatOptions) {
   const { provider, model, selected } = useModelPreference()
-
-  const [initialMessages] = useState<UIMessage[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const raw = localStorage.getItem(storageKey)
-      return raw ? JSON.parse(raw) : []
-    } catch {
-      return []
-    }
-  })
+  const conversationIdRef = useRef(conversationId)
+  useEffect(() => { conversationIdRef.current = conversationId }, [conversationId])
 
   const modelRef = useRef({ provider, model })
   useEffect(() => {
     modelRef.current = { provider, model }
   }, [provider, model])
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: '/api/ai/chat',
-        headers: () => ({
-          'x-ai-provider': modelRef.current.provider,
-          'x-ai-model': modelRef.current.model,
-        }),
+  // eslint-disable-next-line react-hooks/refs -- ref is only read inside the headers callback, not during render
+  const [transport] = useState(() =>
+    new DefaultChatTransport({
+      api: '/api/ai/chat',
+      headers: () => ({
+        'x-ai-provider': modelRef.current.provider,
+        'x-ai-model': modelRef.current.model,
       }),
-    [],
+    }),
   )
 
   const { messages, sendMessage, status, stop, setMessages } = useAiChat({
@@ -73,7 +67,6 @@ export function useChat({ userId }: { userId: string }) {
       } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch failed')) {
         toast.error('Sin conexión. Verifica tu red e intenta de nuevo.')
       } else if (msg.includes('AbortError') || msg.includes('aborted') || msg.includes('The operation was aborted')) {
-        // Stream was interrupted (e.g., server timeout or network drop)
         toast.error('La respuesta se interrumpió. Intenta de nuevo.')
       } else {
         toast.error(detail || 'Ocurrió un error al procesar tu solicitud.')
@@ -81,26 +74,46 @@ export function useChat({ userId }: { userId: string }) {
     },
   })
 
+  // Save to DB when messages change and AI is done responding
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onConversationIdChangeRef = useRef(onConversationIdChange)
+  const onConversationSavedRef = useRef(onConversationSaved)
+  useEffect(() => { onConversationIdChangeRef.current = onConversationIdChange }, [onConversationIdChange])
+  useEffect(() => { onConversationSavedRef.current = onConversationSaved }, [onConversationSaved])
+
   useEffect(() => {
-    if (messages.length > 0) {
-      const trimmed = messages.slice(-MAX_MESSAGES)
-      localStorage.setItem(storageKey, JSON.stringify(trimmed))
+    if (status !== 'ready' || messages.length === 0) return
+
+    // Debounce saves
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      saveConversation(conversationIdRef.current, messages)
+        .then((id) => {
+          if (id && id !== conversationIdRef.current) {
+            onConversationIdChangeRef.current(id)
+          }
+          onConversationSavedRef.current()
+        })
+        .catch(() => {
+          // Silent fail — localStorage was the previous behavior anyway
+        })
+    }, 500)
+
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     }
-  }, [messages, storageKey])
+  }, [messages, status])
 
   // Ref so the branch store always reads the latest messages without stale closures
   const messagesRef = useRef(messages)
   useEffect(() => { messagesRef.current = messages }, [messages])
 
-  function send(text: string) {
+  const send = useCallback((text: string) => {
     sendMessage({ text })
-  }
+  }, [sendMessage])
 
-  // `reload` is not available in @ai-sdk/react v3 — simulate it by truncating
-  // to before the last user+assistant turn and re-submitting the user message.
-  function reload() {
+  const reload = useCallback(() => {
     const msgs = messagesRef.current
-    // Find the last user message
     let lastUserIdx = -1
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') { lastUserIdx = i; break }
@@ -115,19 +128,21 @@ export function useChat({ userId }: { userId: string }) {
 
     if (!text) return
 
-    // Remove the user message and everything after, then re-submit
     setMessages(msgs.slice(0, lastUserIdx))
     sendMessage({ text })
-  }
+  }, [setMessages, sendMessage])
 
-  function clear() {
+  const clear = useCallback(() => {
     setMessages([])
-    localStorage.removeItem(storageKey)
-  }
+    // Delete from DB if there's a current conversation
+    if (conversationIdRef.current) {
+      saveConversation(conversationIdRef.current, []).catch(() => {})
+    }
+  }, [setMessages])
 
   const contextPct = selected.contextWindow > 0
     ? Math.min(100, Math.round((estimateTokens(messages) / selected.contextWindow) * 100))
     : 0
 
-  return { messages, input, setInput, sendMessage: send, status, stop, clear, contextPct, reload, setMessages }
+  return { messages, sendMessage: send, status, stop, clear, contextPct, reload, setMessages }
 }
