@@ -108,6 +108,8 @@ async function getTab(tab: string, refresh = false): Promise<string[][]> {
   }
 }
 
+const MAX_ROWS_PER_TAB = 500
+
 export async function loadTabs(
   tabs: string[],
   refresh = false,
@@ -116,10 +118,17 @@ export async function loadTabs(
   return Object.fromEntries(
     tabs.map((tab, i) => {
       const result = results[i]
-      return [
-        tab,
-        result.status === 'fulfilled' ? result.value : { error: (result.reason as Error).message },
-      ]
+      if (result.status === 'fulfilled') {
+        const data = result.value
+        // Keep header row + last N-1 data rows to stay within token budget
+        const header = data[0] ? [data[0]] : []
+        const rows = data.slice(1)
+        const truncated = rows.length > MAX_ROWS_PER_TAB - 1
+          ? rows.slice(-(MAX_ROWS_PER_TAB - 1))
+          : rows
+        return [tab, [...header, ...truncated]]
+      }
+      return [tab, { error: (result.reason as Error).message }]
     }),
   )
 }

@@ -16,7 +16,7 @@ function estimateTokens(messages: UIMessage[]): number {
   return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.3)
 }
 
-const MAX_MESSAGES = 50
+const MAX_MESSAGES = 20
 
 export function useChat({ userId }: { userId: string }) {
   const storageKey = STORAGE_KEYS.MESSAGES(userId)

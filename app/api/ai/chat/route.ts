@@ -20,7 +20,9 @@ export async function POST(req: Request) {
   const modelHeader = req.headers.get('x-ai-model') ?? undefined
 
   const { messages: uiMessages } = await req.json()
-  const messages = await convertToModelMessages(uiMessages) // type says Promise<> at runtime
+  // Keep only the last 20 messages to limit input token usage
+  const recentUiMessages = Array.isArray(uiMessages) ? uiMessages.slice(-20) : uiMessages
+  const messages = await convertToModelMessages(recentUiMessages) // type says Promise<> at runtime
 
   try {
     const result = await streamText({
@@ -68,7 +70,8 @@ export async function POST(req: Request) {
           execute: async ({ tabs }) => loadTabs(tabs),
         }),
       },
-      stopWhen: stepCountIs(5),
+      maxTokens: 1500,
+      stopWhen: stepCountIs(3),
     })
 
     return result.toUIMessageStreamResponse()
