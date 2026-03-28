@@ -21,6 +21,7 @@ CHARTS — when a chart adds value, append at the end of your response:
 \`\`\`
 Rules: valid Vega-Lite v5 spec · labels in Spanish · amounts in millions COP (e.g. $5.3M)
 · data always inline · chart type suited to the insight (area/line=trend, bar=comparison)
+· max 24 data points — aggregate or sample if needed · omit unused spec fields to keep JSON compact
 
 COACHING STYLE:
 - Always respond in Colombian Spanish using "vos" (informal register).

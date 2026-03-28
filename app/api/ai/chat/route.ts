@@ -70,7 +70,7 @@ export async function POST(req: Request) {
           execute: async ({ tabs }) => loadTabs(tabs),
         }),
       },
-      maxTokens: 1500,
+      maxTokens: 2500,
       stopWhen: stepCountIs(3),
     })
 
