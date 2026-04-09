@@ -2,7 +2,6 @@
 
 import { Component, type ReactNode, useRef, useState } from 'react'
 import { isToolUIPart, type UIMessage } from 'ai'
-import ChartMessage from './ChartMessage'
 import {
   Message,
   MessageContent,
@@ -50,25 +49,6 @@ function extractText(message: UIMessage): string {
     .filter((p) => p.type === 'text')
     .map((p) => (p as { type: 'text'; text: string }).text)
     .join('')
-}
-
-function splitContent(text: string, isStreaming = false): { prose: string; chartSpec: string | null } {
-  const completeMatch = text.match(/```chart\r?\n([\s\S]*?)\r?\n```/)
-  if (completeMatch) {
-    return {
-      prose: text.replace(/```chart\r?\n[\s\S]*?\r?\n```/, '').trim(),
-      chartSpec: completeMatch[1].trim(),
-    }
-  }
-  // During streaming, strip partial chart blocks so prose only grows forward —
-  // never shrinks — avoiding animation cursor misalignment in Streamdown.
-  if (isStreaming) {
-    const partialIdx = text.indexOf('```chart')
-    if (partialIdx !== -1) {
-      return { prose: text.slice(0, partialIdx).trim(), chartSpec: null }
-    }
-  }
-  return { prose: text, chartSpec: null }
 }
 
 function CopyButton({ text, className }: { text: string; className?: string }) {
@@ -234,7 +214,7 @@ export default function MessageBubble({ message, isStreaming, branchStore, onEdi
     return <UserMessage message={message} text={text} onEdit={onEdit} />
   }
 
-  const { prose, chartSpec } = splitContent(text, isStreaming)
+  const prose = text
   const toolParts = message.parts.filter(isToolUIPart)
 
   return (
@@ -262,7 +242,6 @@ export default function MessageBubble({ message, isStreaming, branchStore, onEdi
                 <MessageResponse isAnimating={isStreaming}>{prose}</MessageResponse>
               </MessageContent>
             )}
-            {chartSpec && <ChartMessage spec={chartSpec} />}
             {!isStreaming && prose && (
               <div className="mt-1 ml-1 flex items-center gap-2">
                 <CopyButton text={prose} />

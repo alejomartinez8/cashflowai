@@ -5,6 +5,7 @@ import Image from 'next/image'
 
 function getAvailableProviders(): string[] {
   const available: string[] = []
+  if (process.env.GROQ_API_KEY) available.push('groq')
   if (process.env.ANTHROPIC_API_KEY) available.push('anthropic')
   if (process.env.OPENAI_API_KEY) available.push('openai')
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) available.push('google')

@@ -13,6 +13,8 @@ export interface ModelOption {
 }
 
 export const MODELS: ModelOption[] = [
+  { provider: 'groq',      model: 'llama-3.3-70b-versatile',   label: 'Llama 3.3 70B (Groq)', contextWindow: 128_000 },
+  { provider: 'groq',      model: 'llama-3.1-8b-instant',      label: 'Llama 3.1 8B (Groq)',   contextWindow: 128_000 },
   { provider: 'anthropic', model: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6', contextWindow: 200_000 },
   { provider: 'anthropic', model: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5',  contextWindow: 200_000 },
   { provider: 'openai',    model: 'gpt-4o',                    label: 'GPT-4o',             contextWindow: 128_000 },

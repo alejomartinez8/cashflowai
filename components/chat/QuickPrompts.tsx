@@ -3,7 +3,7 @@ import type { Suggestion } from '@/lib/types'
 const FALLBACK_PROMPTS: Suggestion[] = [
   { icon: '📊', text: '¿Cómo voy vs el plan este año?' },
   { icon: '📈', text: 'Muéstrame la evolución del ingreso pasivo' },
-  { icon: '💸', text: 'Grafica gastos fijos vs variables por mes' },
+  { icon: '💸', text: '¿Cuánto gasté en fijos vs variables este mes?' },
   { icon: '🏦', text: 'Muéstrame el estado de mis deudas' },
   { icon: '🔍', text: '¿Cuál es la tendencia de mis ingresos?' },
   { icon: '🎯', text: '¿Estoy en camino a mis metas financieras?' },
